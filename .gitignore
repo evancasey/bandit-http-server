@@ -1,0 +1,14 @@
+.DS_Store
+.settings
+.project
+.pydevproject
+*.pyc
+*.pyo
+
+env
+venv
+env*
+dist
+bin
+var
+include

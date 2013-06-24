@@ -15,5 +15,5 @@ def create():
     if request.method == "POST":
         data = request.form                
         db.rpush("arms",data['test_key'])
-        pdb.set_trace()
+        db.save()
         return jsonify(data)

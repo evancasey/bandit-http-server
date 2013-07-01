@@ -1,10 +1,4 @@
 from app import app, db, os
-# from api import api
-# from models import *
-from views import *
-from api import *
-
-# api.setup()
 
 #---------------------------------------------
 # launch

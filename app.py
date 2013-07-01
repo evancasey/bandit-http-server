@@ -1,9 +1,6 @@
 import os
-from flask import Flask, request, redirect, render_template, session, url_for, send_from_directory, jsonify
+from flask import Flask, request, session, url_for, jsonify
 from redis import Redis
-import json
-import datetime
-import random
 
 #---------------------------------------------
 # initialization

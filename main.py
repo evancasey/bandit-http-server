@@ -1,4 +1,5 @@
-from app import app, db, os
+from app import app, db
+from api import *
 
 #---------------------------------------------
 # launch

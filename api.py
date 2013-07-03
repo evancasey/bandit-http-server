@@ -1,7 +1,7 @@
 import os
 from flask import request, session, url_for, jsonify, abort, make_response
 from app import app, db
-import helper
+from models import armKeys, banditKeys
 import pdb
 
 #---------------------------------------------
@@ -17,13 +17,16 @@ def createBandit():
 
 	# Initialize the arms
 	arms = {}
+	arms_key_arr = []
 	for i in range(request.json['arm_count']):
-		arms[helper.armKeys()] = {
+		arms_key_arr.append(armKeys())
+		arms[arms_key_arr[i]] = {
 			'value': 0
 		}
 	
 	# Initialize the bandit
 	bandit = {
+		'name': request.json['name'],
 		'arm_count': request.json['arm_count'],
 		'arms': arms,
 		'algo_type': request.json['algo_type'],
@@ -32,10 +35,9 @@ def createBandit():
 		'epsilon': request.json['epsilon']
 	}
 
-	db.hset("bandits", helper.banditKeys(), bandit)
+	db.hset("bandits", banditKeys(), bandit)
 
-	#TODO: change this
-	return jsonify( { db.hget("unique_ids", "bandit"): bandit} ), 201
+	return jsonify( { "name" : bandit['name'], "bandit_id" : db.hget("unique_ids", "bandit"), "arm_ids": arms_key_arr} ), 201
 
 
 # Look up by bandit ID
@@ -46,9 +48,11 @@ def getBandit(bandit_id):
 		abort(404)
 	return jsonify( {'bandit': bandit} )
 
+
 # #TODO: add this
-# @app.route("/api/v1.0/bandits/<int:bandit_id>"), methods = ['PUT'])
+# @app.route("/api/v1.0/bandits/<int:bandit_id>"), methods = ['PATCH'])
 # def updateBandit():
+
 
 # #TODO: add this
 # @app.route("/api/v1.0/bandits/<int:bandit_id>"), mothads = ['DELETE'])

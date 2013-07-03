@@ -51,7 +51,7 @@ def getBandit(bandit_id):
 
 	bandit = db.hget("bandits", bandit_id)
 
-	# if bad ID, throw 404 error
+	# if bad bandit ID, throw 404 error
 	if bandit == None:
 		abort(404)
 
@@ -59,7 +59,7 @@ def getBandit(bandit_id):
 	bandit_dict = ast.literal_eval(bandit)	
 
 	# TODO: add some other stuff here
-	return jsonify( {'name': bandit_dict['name'], 'arms': bandit_dict['arms']} )
+	return jsonify( {'name' : bandit_dict['name'], 'arms': bandit_dict['arms']} )
 
 
 @app.route("/api/v1.0/bandits/<int:bandit_id>", methods = ['PUT'])
@@ -67,13 +67,13 @@ def updateBandit(bandit_id):
 
 	bandit = db.hget("bandits", bandit_id)
 
-	# if bad ID, throw 404 error
+	# if bad bandit ID, throw 404 error
 	if bandit == None:
 		abort(404)
 
 	# if not a json request throw a 400 error
 	if not request.json:
-		abort(404)
+		abort(400)
 
 	# convert to dict 
 	bandit_dict = ast.literal_eval(bandit)
@@ -95,18 +95,29 @@ def updateArm(bandit_id,arm_id):
 
 	bandit = db.hget("bandits", bandit_id)
 
-	# if bad ID, throw 404 error
+	# if bad bandit ID, throw 404 error
 	if bandit == None:
 		abort(404)
 
 	# if not a json request throw a 400 error
 	if not request.json:
-		abort(404)
+		abort(400)
 
 	# convert to dict 
 	bandit_dict = ast.literal_eval(bandit)
 
+	# if bad arm ID, throw 404 error
+	if bandit_dict['arms'] == None:
+		abort(404)
+
+	# if params not give throw 401 error
+	if not 'value' in request.json:
+		abort(401)
+
 	bandit_dict['arms'][str(arm_id)]['value'] = request.json.get('value', bandit_dict['arms'][str(arm_id)]['value'])
+	bandit_dict['arms'][str(arm_id)]['count'] = bandit_dict['arms'][str(arm_id)]['count'] + 1
+
+	db.hset("bandits", bandit_id, bandit_dict)
 
 	# TODO: add some other stuff here
 	return jsonify( { bandit_id : bandit_dict['arms'] } )
@@ -118,7 +129,7 @@ def deleteBandit(bandit_id):
 	
 	bandit = db.hget("bandits", bandit_id)
 
-	# if bad ID, throw 404 error
+	# if bad bandit ID, throw 404 error
 	if bandit == None:
 		abort(404)
 

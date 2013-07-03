@@ -1,7 +1,7 @@
 import random
 
 #---------------------------------------------
-# Implemention of the E-Greedy Multi-Armed Bandit Algorithm
+# Original implemention of the E-Greedy Multi-Armed Bandit Algorithm
 # by John Myles White https://github.com/johnmyleswhite/BanditsBook/
 # --------------------------------------------
 

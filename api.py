@@ -2,7 +2,7 @@ import os
 from flask import request, session, url_for, jsonify, abort, make_response
 from app import app, db
 from models import armKeys, banditKeys
-from algorithms.epsilon_greedy import selectArm, update
+from algorithms import epsilon_greedy
 import pdb
 import json
 import ast
@@ -60,7 +60,7 @@ def getBandit(bandit_id):
 	bandit_dict = ast.literal_eval(bandit)	
 
 	# TODO: add some other stuff here
-	return jsonify( {'name' : bandit_dict['name'], 'arms': bandit_dict['arms'], 'current_arm' : selectArm(bandit_dict)} )
+	return jsonify( {'name' : bandit_dict['name'], 'arms': bandit_dict['arms'], 'current_arm' : epsilon_greedy.selectArm(bandit_dict)} )
 
 
 @app.route("/api/v1.0/bandits/<int:bandit_id>", methods = ['PUT'])
@@ -92,7 +92,7 @@ def updateBandit(bandit_id):
 
 
 @app.route("/api/v1.0/bandits/<int:bandit_id>/arms/<int:arm_id>", methods = ['PUT'])
-def updateArm(bandit_id,arm_id):
+def updateArm(bandit_id, arm_id):
 
 	bandit = db.hget("bandits", bandit_id)
 
@@ -112,10 +112,12 @@ def updateArm(bandit_id,arm_id):
 		abort(404)
 
 	# if params not give throw 401 error
-	if not 'value' in request.json:
+	if not 'reward' in request.json:
 		abort(401)
 
-	# reward = bandit_dict['arms'][str(arm_id)]['reward']
+	reward = request.json['reward']
+
+	bandit_dict = epsilon_greedy.update(bandit_dict, arm_id, reward)
 
 	db.hset("bandits", bandit_id, bandit_dict)
 

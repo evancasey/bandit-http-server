@@ -30,12 +30,13 @@ def selectArm(bandit):
 def update(bandit, arm_id, reward):
   ''' gets called after each trial '''
 
-  # bandit_dict['arms'][str(arm_id)]['count'] = bandit_dict['arms'][str(arm_id)]['count'] + 1
+  current_arm = bandit['arms'][str(arm_id)]
 
-  self.counts[chosen_arm] = self.counts[chosen_arm] + 1
-  n = self.counts[chosen_arm]
+  current_arm['count'] = current_arm['count'] + 1
+  n = current_arm['count']
   
-  value = self.values[chosen_arm]
+  value = current_arm['value']
   new_value = ((n - 1) / float(n)) * value + (1 / float(n)) * reward
-  self.values[chosen_arm] = new_value
-  return
+  current_arm['value'] = new_value
+  
+  return bandit

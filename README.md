@@ -1,7 +1,7 @@
 Create Bandit:
 
 ```
-$ curl -i -H "Content-Type: application/json" -X POST -d '{"name":"test","arm_count":4,"algo_type":"egreedy","horizon_type":"time", "horizon_value":60, "epsilon":.1}' http://localhost:5000/api/v1.0/bandits
+$ curl -i -H "Content-Type: application/json" -X POST -d '{"name":"test","arm_count":4,"algo_type":"egreedy","horizon_type":"time", "horizon_value":60, "epsilon":0.1}' http://localhost:5000/api/v1.0/bandits
 ```
 
 Get Bandit:

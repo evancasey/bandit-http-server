@@ -4,8 +4,8 @@ from app import db
 # models
 # --------------------------------------------
 
-def armKeys():
+def arm_keys():
 	return db.hincrby("unique_ids", "arm")
 
-def banditKeys():
+def bandit_keys():
 	return db.hincrby("unique_ids", "bandit")

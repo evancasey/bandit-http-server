@@ -1,43 +1,41 @@
 import random
-from app import db
 import pdb
 
 #---------------------------------------------
-# Original implemention of the E-Greedy Multi-Armed Bandit Algorithm
+# Original implemention of this E-Greedy Multi-Armed Bandit Algorithm
 # by John Myles White https://github.com/johnmyleswhite/BanditsBook/
 # --------------------------------------------
 
-def ind_max(x):
-  ''' returns the index of the max value in the array '''
+def key_max(x):    
+    return max(x, key = x.get)
 
-  m = max(x)
-  return x.index(m)
+class EpsilonGreedy():
 
-def selectArm(bandit):
-  ''' determines which arm to pick based on values'''
+    def __init__(self, bandit):
+        self.epsilon = bandit['epsilon']
+        self.counts = {}
+        self.values = {}
+        for k,v in bandit['arms'].iteritems():
+            self.counts[k] = v['count']
+            self.values[k] = v['value']        
+        return
 
-  epsilon = bandit['epsilon']
+    def select_arm(self):
+        if random.random() > self.epsilon:
+            return int(key_max(self.values))
+        else:
+            return random.randrange(len(self.values))
 
-  arm_values_arr = []
-  for k in bandit['arms']:
-    arm_values_arr.append(bandit['arms'][k])
-    
-  if random.random() > epsilon:
-    return ind_max(arm_values_arr)
-  else:
-    return random.randrange(len(arm_values_arr))
+    def update(self, chosen_arm, reward):
 
-def update(bandit, arm_id, reward):
-  ''' gets called after each trial '''
+        self.counts[str(chosen_arm)] = self.counts[str(chosen_arm)] + 1
+        n = self.counts[str(chosen_arm)]
+        
+        value = self.values[str(chosen_arm)]
+        new_value = ((n - 1) / float(n)) * value + (1 / float(n)) * reward
+        print chosen_arm
+        self.values[str(chosen_arm)] = new_value
 
-  pdb.set_trace()
-  current_arm = bandit['arms'][str(arm_id)]
+        arm = { 'count' : n, 'value' : new_value}
 
-  current_arm['count'] = current_arm['count'] + 1
-  n = current_arm['count']
-  
-  value = current_arm['value']
-  new_value = ((n - 1) / float(n)) * value + (1 / float(n)) * reward
-  current_arm['value'] = new_value
-
-  return bandit
+        return arm

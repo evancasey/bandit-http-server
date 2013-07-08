@@ -4,7 +4,7 @@ A Python/Flask REST API for the bandit algorithms.
 
 ## Getting Started
 
-The OKL-bandits API has 5 different API calls, and each Bandit has 6 parameters associated with it. These include:
+Each Bandit has up to 7 parameters associated with it. These include:
 
 "name": This can be any string
 
@@ -18,6 +18,8 @@ The OKL-bandits API has 5 different API calls, and each Bandit has 6 parameters 
 
 "epsilon": Must be a float between 0 and 1
 
+"temperature": Must be a float between 0 and 1
+
 
 ## Making API Calls
 
@@ -25,7 +27,7 @@ The OKL-bandits API has 5 different API calls, and each Bandit has 6 parameters 
 #### Creating a Bandit:
 
 ```
-$ curl -i -H "Content-Type: application/json" -X POST -d '{"name":"test","arm_count":4,"algo_type":"egreedy","budget_type":"time", "budget":60, "epsilon":0.1}' http://localhost:5000/api/v1.0/bandits
+$ curl -i -H "Content-Type: application/json" -X POST -d '{"name":"test","arm_count":4,"algo_type":"egreedy","budget_type":"trials", "budget":1000, "epsilon":0.1}' http://localhost:5000/api/v1.0/bandits
 ```
 
 #### Looking up a Bandit:
@@ -43,7 +45,7 @@ $ curl -i http://localhost:5000/api/v1.0/bandits/1/arms/current
 #### Updating a Bandit:
 
 ```
-$ curl -i -H "Content-Type: application/json" -X PUT -d '{"name":"test","algo_type":"egreedy","budget_type":"time", "budget":60, "epsilon":0.2}' http://localhost:5000/api/v1.0/bandits/1
+$ curl -i -H "Content-Type: application/json" -X PUT -d '{"name":"test","algo_type":"egreedy","budget_type":"trials", "budget":1000, "epsilon":0.1}' http://localhost:5000/api/v1.0/bandits/1
 ```
 
 #### Updating a Bandit's Arm:
@@ -52,5 +54,10 @@ $ curl -i -H "Content-Type: application/json" -X PUT -d '{"name":"test","algo_ty
 $ curl -i -H "Content-Type: application/json" -X PUT -d '{"reward":5000}' http://localhost:5000/api/v1.0/bandits/1/arms/1
 ```
 
+#### Deleting a Bandit:
+
+'''
+$ curl -i -H "Content-Type: application/json" -X DELETE -d '{"reward":5000}' http://localhost:5000/api/v1.0/bandits/1
+'''
 
 

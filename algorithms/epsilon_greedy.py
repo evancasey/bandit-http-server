@@ -30,6 +30,7 @@ def selectArm(bandit):
 def update(bandit, arm_id, reward):
   ''' gets called after each trial '''
 
+  pdb.set_trace()
   current_arm = bandit['arms'][str(arm_id)]
 
   current_arm['count'] = current_arm['count'] + 1
@@ -38,5 +39,5 @@ def update(bandit, arm_id, reward):
   value = current_arm['value']
   new_value = ((n - 1) / float(n)) * value + (1 / float(n)) * reward
   current_arm['value'] = new_value
-  
+
   return bandit

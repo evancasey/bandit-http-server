@@ -5,7 +5,6 @@ from models import armKeys, banditKeys
 from algorithms import epsilon_greedy
 import pdb
 import json
-import ast
 
 #---------------------------------------------
 # api
@@ -13,21 +12,19 @@ import ast
 
 @app.route("/api/v1.0/bandits", methods = ['POST'])
 def createBandit():
+	''' Create a new bandit experiment '''
 
 	# if not a json request throw a 400 error
 	if not request.json:
 		abort(400)
 
 	# if params not given throw a 401 error
-	if not all (p in request.json for p in ('name','arm_count','algo_type','horizon_type','horizon_value','epsilon')):
+	if not all (p in request.json for p in ('name','arm_count','algo_type','budget_type','budget','epsilon')):
 		abort(401)
 
 	arms = {}
-	arm_keys_arr = []
-
 	for i in range(request.json['arm_count']):
-		arm_keys_arr.append(armKeys())
-		arms[arm_keys_arr[i]] = {
+		arms[armKeys()] = {
 			'value': 0,
 			'count': 0
 		}
@@ -37,58 +34,65 @@ def createBandit():
 		'arm_count': request.json['arm_count'],
 		'arms': arms,
 		'algo_type': request.json['algo_type'],
-		'horizon_type': request.json['horizon_type'],
-		'horizon_value': request.json['horizon_value'],
+		'budget_type': request.json['budget_type'],
+		'budget': request.json['budget'],
 		'epsilon': request.json['epsilon']
 	}
 
-	db.hset("bandits", banditKeys(), bandit)
+	db.hset("bandits", banditKeys(), json.dumps(bandit))
 
 	return jsonify( { "name" : bandit['name'], "bandit_id" : db.hget("unique_ids", "bandit"), "arm_ids" : arm_keys_arr} ), 201
 
 
 @app.route("/api/v1.0/bandits/<int:bandit_id>", methods = ['GET'])
 def getBandit(bandit_id):
+	''' Lookup a bandit by its ID '''
 
-	bandit = db.hget("bandits", bandit_id)
-
-	# if bad bandit ID, throw 404 error
-	if bandit == None:
+	try:
+		bandit = eval(db.hget("bandits", bandit_id))
+	except TypeError:
 		abort(404)
 
-	# convert to dict 
-	bandit_dict = ast.literal_eval(bandit)	
+	#TODO: Add regret, other stats
+	return jsonify(bandit)
 
-	# TODO: add some other stuff here
-	return jsonify( {'name' : bandit_dict['name'], 'arms': bandit_dict['arms'], 'current_arm' : epsilon_greedy.selectArm(bandit_dict)} )
+
+@app.route("/api/v1.0/bandits/<int:bandit_id>/arms/current", methods = ['GET'])
+def getCurrentArm(bandit_id):
+	''' Get the bandit's "best" arm '''
+
+	try:
+		bandit = eval(db.hget("bandits", bandit_id))
+	except TypeError:
+		abort(404)
+
+	return jsonify( { 'current_arm' : epsilon_greedy.selectArm(bandit) } )
 
 
 @app.route("/api/v1.0/bandits/<int:bandit_id>", methods = ['PUT'])
 def updateBandit(bandit_id):
-
-	bandit = db.hget("bandits", bandit_id)
-
-	# if bad bandit ID, throw 404 error
-	if bandit == None:
-		abort(404)
+	''' Update a bandit's name, algo_type, budget_type, budget, or epsilon '''
 
 	# if not a json request throw a 400 error
 	if not request.json:
 		abort(400)
 
-	# convert to dict 
-	bandit_dict = ast.literal_eval(bandit)
+	try:
+		bandit = eval(db.hget("bandits", bandit_id))
+	except TypeError:
+		abort(404)
 
-	bandit_dict['name'] = request.json.get('name', bandit_dict['name'])
-	bandit_dict['algo_type'] = request.json.get('algo_type', bandit_dict['algo_type'])
-	bandit_dict['horizon_type'] = request.json.get('horizon_type', bandit_dict['horizon_type'])
-	bandit_dict['horizon_value'] = request.json.get('horizon_value', bandit_dict['horizon_value'])
-	bandit_dict['epsilon'] = request.json.get('epsilon', bandit_dict['epsilon'])
+	# update these fields if provided
+	bandit['name'] = request.json.get('name', bandit['name'])
+	bandit['algo_type'] = request.json.get('algo_type', bandit['algo_type'])
+	bandit['budget_type'] = request.json.get('budget_type', bandit['budget_type'])
+	bandit['budget'] = request.json.get('budget', bandit['budget'])
+	bandit['epsilon'] = request.json.get('epsilon', bandit['epsilon'])
 
-	db.hset("bandits", bandit_id, bandit_dict)
+	db.hset("bandits", bandit_id, bandit)
 
 	# TODO: add some other stuff here
-	return jsonify( { bandit_id : bandit_dict } )
+	return jsonify(bandit)
 
 
 @app.route("/api/v1.0/bandits/<int:bandit_id>/arms/<int:arm_id>", methods = ['PUT'])
@@ -105,7 +109,9 @@ def updateArm(bandit_id, arm_id):
 		abort(400)
 
 	# convert to dict 
-	bandit_dict = ast.literal_eval(bandit)
+	bandit_dict = json.loads(json.dumps(bandit))
+
+	pdb.set_trace()
 
 	# if bad arm ID, throw 404 error
 	if bandit_dict['arms'] == None:
@@ -123,7 +129,6 @@ def updateArm(bandit_id, arm_id):
 
 	# TODO: add some other stuff here
 	return jsonify( { bandit_id : bandit_dict['arms'] } )
-
 
 
 @app.route("/api/v1.0/bandits/<int:bandit_id>", methods = ['DELETE'])

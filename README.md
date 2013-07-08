@@ -7,14 +7,20 @@ A Python/Flask REST API for the bandit algorithms.
 The OKL-bandits API has 5 different API calls, and each Bandit has 6 parameters associated with it. These include:
 
 "name": This can be any string
+
 "arm_count": Can be any positive integer (may change later)
+
 "algo_type": Only "egreedy" or "softmax" (will add more later)
+
 "budget_type": Only "trials" (will add more later)
+
 "budget": Can be any positive integer
+
 "epsilon": Must be a float between 0 and 1
 
 
-'''
+## Making API Calls
+
 
 #### Creating a Bandit:
 

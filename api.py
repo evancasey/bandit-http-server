@@ -19,17 +19,21 @@ def create_bandit():
 		abort(400)
 
 	# if params not given or improper, throw a 401 error
-	if not all (p in request.json for p in ('name','arm_count','algo_type','budget_type','budget')) \
+	if not all (p in request.json for p in ('name','arm_count','algo_type','budget_type','budget', 'reward_type')) \
 		or (request.json['arm_count'] < 0) \
 		or (request.json['algo_type'] not in ('egreedy','softmax')) \
 		or (request.json['budget_type'] not in ('trials')) \
-		or (request.json['budget'] < 0):
+		or (request.json['budget'] < 0) \
+		or (request.json['reward_type'] not in ('click')):
 		abort(401)
 
 	# if algo_type is egreedy and epsilon is improper or not given, throw a 401 error
 	if request.json['algo_type'] == 'egreedy' and not request.json['epsilon'] \
-		or ((request.json['epsilon'] < 0.0) or (request.json['epsilon'] > 1.0)):
+		or ((request.json['epsilon'] <= 0.0) or (request.json['epsilon'] > 1.0)):
 		abort(401)
+
+	if request.json['reward_type'] in ('click'):
+		max_reward = 1
 
 	arms = {}
 	for i in range(request.json['arm_count']):
@@ -46,7 +50,12 @@ def create_bandit():
 		'budget_type': request.json['budget_type'],
 		'budget': request.json['budget'],
 		'epsilon': request.json.get('epsilon', ""), # egreedy
-		'temperature': request.json.get('temperature', "") # softmax, hedge
+		'temperature': request.json.get('temperature', ""), # softmax		
+		'reward_type': request.json['reward_type'],
+		'max_reward': max_reward,
+		'total_reward': 0,
+		'total_count': 0,
+		'regret': 0
 	}
 
 	db.hset("bandits", bandit_keys(), json.dumps(bandit))
@@ -63,8 +72,7 @@ def get_bandit(bandit_id):
 		abort(404)
 
 	#TODO: Add regret, other stats
-	return jsonify(bandit_dict)
-
+	return jsonify( { 'name' : bandit_dict['name'], 'total_reward' : bandit_dict['total_reward'], 'total_count' : bandit_dict['total_count'], 'regret' : bandit_dict['regret'] } )
 @app.route("/api/v1.0/bandits/<int:bandit_id>/arms/current", methods = ['GET'])
 def get_current_arm(bandit_id):
 	''' Get the bandit's "best" arm '''
@@ -128,7 +136,13 @@ def update_arm(bandit_id, arm_id):
 	bandit = epsilon_greedy.EpsilonGreedy(bandit_dict)
 
 	# update the arm
-	bandit_dict['arms'][str(arm_id)] = epsilon_greedy.EpsilonGreedy.update(bandit, arm_id, request.json['reward'])	
+	update_data = epsilon_greedy.EpsilonGreedy.update(bandit, arm_id, request.json['reward'])	
+
+	bandit_dict['arms'][str(arm_id)]['count'] = update_data['count']
+	bandit_dict['arms'][str(arm_id)]['value'] = update_data['value']
+	bandit_dict['regret'] = update_data['regret']
+	bandit_dict['total_reward'] = update_data['total_reward']
+	bandit_dict['total_count'] = update_data['total_count']
 
 	db.hset("bandits",bandit_id, bandit_dict)
 
@@ -136,7 +150,7 @@ def update_arm(bandit_id, arm_id):
 	return jsonify( { bandit_id : bandit_dict['arms'] } )
 
 @app.route("/api/v1.0/bandits/<int:bandit_id>", methods = ['DELETE'])
-def delete_bandit(bandit_id):
+def delete_bandit(bandit_id):		
 
 	try:
 		bandit_dict = eval(db.hget("bandits", bandit_id))

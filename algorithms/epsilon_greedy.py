@@ -17,7 +17,11 @@ class EpsilonGreedy():
         self.values = {}
         for k,v in bandit['arms'].iteritems():
             self.counts[k] = v['count']
-            self.values[k] = v['value']        
+            self.values[k] = v['value']            
+        self.max_reward = bandit['max_reward']  
+        self.total_reward = bandit['total_reward']
+        self.total_count = bandit['total_count']
+        self.regret = bandit['regret']  
         return
 
     def select_arm(self):
@@ -28,14 +32,18 @@ class EpsilonGreedy():
 
     def update(self, chosen_arm, reward):
 
+        # update count
         self.counts[str(chosen_arm)] = self.counts[str(chosen_arm)] + 1
         n = self.counts[str(chosen_arm)]
-        
+
+        # update value
         value = self.values[str(chosen_arm)]
         new_value = ((n - 1) / float(n)) * value + (1 / float(n)) * reward
-        print chosen_arm
         self.values[str(chosen_arm)] = new_value
 
-        arm = { 'count' : n, 'value' : new_value}
+        # update regret, total reward, and total_count
+        self.total_reward += reward
+        self.total_count += 1
+        self.regret = (sum(self.counts.values()) * self.max_reward) - self.total_reward
 
-        return arm
+        return { 'count' : n, 'value' : new_value, 'regret' : self.regret, 'total_reward' : self.total_reward, 'total_count' : self.total_count}

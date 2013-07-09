@@ -2,9 +2,16 @@ import os
 from flask import request, session, url_for, jsonify, abort, make_response
 from app import app, db
 from models import arm_keys, bandit_keys
-from algorithms import epsilon_greedy
+from algorithms import epsilon_greedy, softmax
 import pdb
 import json
+
+def set_bandit(bandit):
+	# helper method to initialize the correct bandit class object
+	return {
+		'egreedy' : epsilon_greedy.EpsilonGreedy(bandit),
+		'softmax' : softmax.Softmax(bandit)
+	}[bandit['algo_type']]
 
 #---------------------------------------------
 # api routes
@@ -28,9 +35,18 @@ def create_bandit():
 		abort(401)
 
 	# if algo_type is egreedy and epsilon is improper or not given, throw a 401 error
-	if request.json['algo_type'] == 'egreedy' and not request.json['epsilon'] \
-		or ((request.json['epsilon'] <= 0.0) or (request.json['epsilon'] > 1.0)):
-		abort(401)
+	if request.json['algo_type'] == 'egreedy':
+		if not 'epsilon' in request.json.keys():
+			abort(401)
+		elif (request.json['epsilon'] <= 0.0):
+			abort(401)
+
+	# if algo_type is softmax is improper or not given, throw a 401 error
+	if request.json['algo_type'] == 'softmax':
+		if not 'temperature' in request.json.keys():
+			abort(401)
+		elif (request.json['temperature'] <= 0.0):
+			abort(401)
 
 	if request.json['reward_type'] in ('click'):
 		max_reward = 1
@@ -71,8 +87,8 @@ def get_bandit(bandit_id):
 	except TypeError:
 		abort(404)
 
-	#TODO: Add regret, other stats
 	return jsonify( { 'name' : bandit_dict['name'], 'total_reward' : bandit_dict['total_reward'], 'total_count' : bandit_dict['total_count'], 'regret' : bandit_dict['regret'] } )
+
 @app.route("/api/v1.0/bandits/<int:bandit_id>/arms/current", methods = ['GET'])
 def get_current_arm(bandit_id):
 	''' Get the bandit's "best" arm '''
@@ -82,17 +98,17 @@ def get_current_arm(bandit_id):
 	except TypeError:
 		abort(404)
 
-	# initialize the bandit algo class object
-	bandit = epsilon_greedy.EpsilonGreedy(bandit_dict)
+	# initialize the bandit class object
+	bandit = set_bandit(bandit_dict)
 
 	# find the "best" arm
-	current_arm = epsilon_greedy.EpsilonGreedy.select_arm(bandit)
+	current_arm = bandit.select_arm()
 
 	return jsonify( { 'current_arm' : current_arm } )
 
 @app.route("/api/v1.0/bandits/<int:bandit_id>", methods = ['PUT'])
 def update_bandit(bandit_id):
-	''' Update a bandit's name, algo_type, budget_type, budget, or epsilon '''
+	''' Update a bandit's name, algo_type, budget_type, budget, epsilon, temperature, reward_type, or max_reward '''
 
 	# if not a json request throw a 400 error
 	if not request.json:
@@ -109,6 +125,9 @@ def update_bandit(bandit_id):
 	bandit_dict['budget_type'] = request.json.get('budget_type', bandit_dict['budget_type'])
 	bandit_dict['budget'] = request.json.get('budget', bandit_dict['budget'])
 	bandit_dict['epsilon'] = request.json.get('epsilon', bandit_dict['epsilon'])
+	bandit_dict['temperature'] = request.json.get('temperature', bandit_dict['temperature'])
+	bandit_dict['reward_type'] = request.json.get('reward_type', bandit_dict['reward_type'])
+	bandit_dict['max_reward'] = request.json.get('max_reward', bandit_dict['max_reward'])
 
 	db.hset("bandits", bandit_id, bandit_dict)
 
@@ -128,21 +147,23 @@ def update_arm(bandit_id, arm_id):
 
 	try:
 		bandit_dict = eval(db.hget("bandits", bandit_id))
-		arm = bandit_dict['arms'][str(arm_id)]
-	except TypeError, KeyError:
+		arm = bandit_dict['arms'][str(arm_id)]	
+	except TypeError:
+		abort(404)
+	except KeyError:
 		abort(404)
 
 	# initialize the bandit algo class object
-	bandit = epsilon_greedy.EpsilonGreedy(bandit_dict)
+	bandit = set_bandit(bandit_dict)
 
 	# update the arm
-	update_data = epsilon_greedy.EpsilonGreedy.update(bandit, arm_id, request.json['reward'])	
+	bandit.update(str(arm_id), request.json['reward'])	
 
-	bandit_dict['arms'][str(arm_id)]['count'] = update_data['count']
-	bandit_dict['arms'][str(arm_id)]['value'] = update_data['value']
-	bandit_dict['regret'] = update_data['regret']
-	bandit_dict['total_reward'] = update_data['total_reward']
-	bandit_dict['total_count'] = update_data['total_count']
+	bandit_dict['arms'][str(arm_id)]['count'] = bandit.counts[str(arm_id)]
+	bandit_dict['arms'][str(arm_id)]['value'] = bandit.values[str(arm_id)]
+	bandit_dict['regret'] = bandit.regret
+	bandit_dict['total_reward'] = bandit.total_reward
+	bandit_dict['total_count'] = bandit.total_count
 
 	db.hset("bandits",bandit_id, bandit_dict)
 

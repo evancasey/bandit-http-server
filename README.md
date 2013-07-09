@@ -4,7 +4,7 @@ A Python/Flask REST API for the bandit algorithms.
 
 ## Getting Started
 
-Each Bandit has up to 7 parameters associated with it. These include:
+Each Bandit has up to 8 parameters associated with it. These include:
 
 "name": Can be any string
 
@@ -18,7 +18,7 @@ Each Bandit has up to 7 parameters associated with it. These include:
 
 "epsilon": Must be a float between 0 and 1
 
-"temperature": Must be a float between 0 and 1
+"temperature": Must be a float between 0 and infinity
 
 "reward_type": Only "click" (will add more later)
 
@@ -60,8 +60,8 @@ $ curl -i -H "Content-Type: application/json" -X PUT -d '{"reward":1}' http://lo
 
 #### Deleting a Bandit:
 
-'''
+```
 $ curl -i -H "Content-Type: application/json" -X DELETE -d '{"reward":5000}' http://localhost:5000/api/v1.0/bandits/1
-'''
+```
 
 

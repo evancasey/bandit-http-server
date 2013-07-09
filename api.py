@@ -1,33 +1,59 @@
 import os
 from flask import request, session, url_for, jsonify, abort, make_response
 from app import app, db
-from models import armKeys, banditKeys
-from algorithms import epsilon_greedy
+from models import arm_keys, bandit_keys
+from algorithms import epsilon_greedy, softmax
 import pdb
 import json
-import ast
+
+def set_bandit(bandit):
+	# helper method to initialize the correct bandit class object
+	return {
+		'egreedy' : epsilon_greedy.EpsilonGreedy(bandit),
+		'softmax' : softmax.Softmax(bandit)
+	}[bandit['algo_type']]
 
 #---------------------------------------------
-# api
+# api routes
 # --------------------------------------------
 
 @app.route("/api/v1.0/bandits", methods = ['POST'])
-def createBandit():
+def create_bandit():
+	''' Create a new bandit experiment '''
 
 	# if not a json request throw a 400 error
 	if not request.json:
 		abort(400)
 
-	# if params not given throw a 401 error
-	if not all (p in request.json for p in ('name','arm_count','algo_type','horizon_type','horizon_value','epsilon')):
+	# if params not given or improper, throw a 401 error
+	if not all (p in request.json for p in ('name','arm_count','algo_type','budget_type','budget', 'reward_type')) \
+		or (request.json['arm_count'] < 0) \
+		or (request.json['algo_type'] not in ('egreedy','softmax')) \
+		or (request.json['budget_type'] not in ('trials')) \
+		or (request.json['budget'] < 0) \
+		or (request.json['reward_type'] not in ('click')):
 		abort(401)
 
-	arms = {}
-	arm_keys_arr = []
+	# if algo_type is egreedy and epsilon is improper or not given, throw a 401 error
+	if request.json['algo_type'] == 'egreedy':
+		if not 'epsilon' in request.json.keys():
+			abort(401)
+		elif (request.json['epsilon'] <= 0.0):
+			abort(401)
 
+	# if algo_type is softmax is improper or not given, throw a 401 error
+	if request.json['algo_type'] == 'softmax':
+		if not 'temperature' in request.json.keys():
+			abort(401)
+		elif (request.json['temperature'] <= 0.0):
+			abort(401)
+
+	if request.json['reward_type'] in ('click'):
+		max_reward = 1
+
+	arms = {}
 	for i in range(request.json['arm_count']):
-		arm_keys_arr.append(armKeys())
-		arms[arm_keys_arr[i]] = {
+		arms[arm_keys()] = {
 			'value': 0,
 			'count': 0
 		}
@@ -37,102 +63,119 @@ def createBandit():
 		'arm_count': request.json['arm_count'],
 		'arms': arms,
 		'algo_type': request.json['algo_type'],
-		'horizon_type': request.json['horizon_type'],
-		'horizon_value': request.json['horizon_value'],
-		'epsilon': request.json['epsilon']
+		'budget_type': request.json['budget_type'],
+		'budget': request.json['budget'],
+		'epsilon': request.json.get('epsilon', ""), # egreedy
+		'temperature': request.json.get('temperature', ""), # softmax		
+		'reward_type': request.json['reward_type'],
+		'max_reward': max_reward,
+		'total_reward': 0,
+		'total_count': 0,
+		'regret': 0
 	}
 
-	db.hset("bandits", banditKeys(), bandit)
+	db.hset("bandits", bandit_keys(), json.dumps(bandit))
 
-	return jsonify( { "name" : bandit['name'], "bandit_id" : db.hget("unique_ids", "bandit"), "arm_ids" : arm_keys_arr} ), 201
-
+	return jsonify( { "name" : bandit['name'], "bandit_id" : db.hget("unique_ids", "bandit"), "arm_ids" : bandit['arms'].keys()} ), 201
 
 @app.route("/api/v1.0/bandits/<int:bandit_id>", methods = ['GET'])
-def getBandit(bandit_id):
+def get_bandit(bandit_id):
+	''' Lookup a bandit by its ID '''
 
-	bandit = db.hget("bandits", bandit_id)
-
-	# if bad bandit ID, throw 404 error
-	if bandit == None:
+	try:
+		bandit_dict = eval(db.hget("bandits", bandit_id))
+	except TypeError:
 		abort(404)
 
-	# convert to dict 
-	bandit_dict = ast.literal_eval(bandit)	
+	return jsonify( { 'name' : bandit_dict['name'], 'total_reward' : bandit_dict['total_reward'], 'total_count' : bandit_dict['total_count'], 'regret' : bandit_dict['regret'] } )
 
-	# TODO: add some other stuff here
-	return jsonify( {'name' : bandit_dict['name'], 'arms': bandit_dict['arms'], 'current_arm' : epsilon_greedy.selectArm(bandit_dict)} )
+@app.route("/api/v1.0/bandits/<int:bandit_id>/arms/current", methods = ['GET'])
+def get_current_arm(bandit_id):
+	''' Get the bandit's "best" arm '''
 
+	try:
+		bandit_dict = eval(db.hget("bandits", bandit_id))
+	except TypeError:
+		abort(404)
+
+	# initialize the bandit class object
+	bandit = set_bandit(bandit_dict)
+
+	# find the "best" arm
+	current_arm = bandit.select_arm()
+
+	return jsonify( { 'current_arm' : current_arm } )
 
 @app.route("/api/v1.0/bandits/<int:bandit_id>", methods = ['PUT'])
-def updateBandit(bandit_id):
-
-	bandit = db.hget("bandits", bandit_id)
-
-	# if bad bandit ID, throw 404 error
-	if bandit == None:
-		abort(404)
+def update_bandit(bandit_id):
+	''' Update a bandit's name, algo_type, budget_type, budget, epsilon, temperature, reward_type, or max_reward '''
 
 	# if not a json request throw a 400 error
 	if not request.json:
 		abort(400)
 
-	# convert to dict 
-	bandit_dict = ast.literal_eval(bandit)
+	try:
+		bandit_dict = eval(db.hget("bandits", bandit_id))
+	except TypeError:
+		abort(404)
 
+	# update these fields if provided
 	bandit_dict['name'] = request.json.get('name', bandit_dict['name'])
 	bandit_dict['algo_type'] = request.json.get('algo_type', bandit_dict['algo_type'])
-	bandit_dict['horizon_type'] = request.json.get('horizon_type', bandit_dict['horizon_type'])
-	bandit_dict['horizon_value'] = request.json.get('horizon_value', bandit_dict['horizon_value'])
+	bandit_dict['budget_type'] = request.json.get('budget_type', bandit_dict['budget_type'])
+	bandit_dict['budget'] = request.json.get('budget', bandit_dict['budget'])
 	bandit_dict['epsilon'] = request.json.get('epsilon', bandit_dict['epsilon'])
+	bandit_dict['temperature'] = request.json.get('temperature', bandit_dict['temperature'])
+	bandit_dict['reward_type'] = request.json.get('reward_type', bandit_dict['reward_type'])
+	bandit_dict['max_reward'] = request.json.get('max_reward', bandit_dict['max_reward'])
 
 	db.hset("bandits", bandit_id, bandit_dict)
 
 	# TODO: add some other stuff here
-	return jsonify( { bandit_id : bandit_dict } )
-
+	return jsonify(bandit_dict)
 
 @app.route("/api/v1.0/bandits/<int:bandit_id>/arms/<int:arm_id>", methods = ['PUT'])
-def updateArm(bandit_id, arm_id):
-
-	bandit = db.hget("bandits", bandit_id)
-
-	# if bad bandit ID, throw 404 error
-	if bandit == None:
-		abort(404)
+def update_arm(bandit_id, arm_id):
 
 	# if not a json request throw a 400 error
 	if not request.json:
 		abort(400)
-
-	# convert to dict 
-	bandit_dict = ast.literal_eval(bandit)
-
-	# if bad arm ID, throw 404 error
-	if bandit_dict['arms'] == None:
-		abort(404)
 
 	# if params not give throw 401 error
 	if not 'reward' in request.json:
 		abort(401)
 
-	reward = request.json['reward']
+	try:
+		bandit_dict = eval(db.hget("bandits", bandit_id))
+		arm = bandit_dict['arms'][str(arm_id)]	
+	except TypeError:
+		abort(404)
+	except KeyError:
+		abort(404)
 
-	bandit_dict = epsilon_greedy.update(bandit_dict, arm_id, reward)
+	# initialize the bandit algo class object
+	bandit = set_bandit(bandit_dict)
 
-	db.hset("bandits", bandit_id, bandit_dict)
+	# update the arm
+	bandit.update(str(arm_id), request.json['reward'])	
+
+	bandit_dict['arms'][str(arm_id)]['count'] = bandit.counts[str(arm_id)]
+	bandit_dict['arms'][str(arm_id)]['value'] = bandit.values[str(arm_id)]
+	bandit_dict['regret'] = bandit.regret
+	bandit_dict['total_reward'] = bandit.total_reward
+	bandit_dict['total_count'] = bandit.total_count
+
+	db.hset("bandits",bandit_id, bandit_dict)
 
 	# TODO: add some other stuff here
 	return jsonify( { bandit_id : bandit_dict['arms'] } )
 
-
-
 @app.route("/api/v1.0/bandits/<int:bandit_id>", methods = ['DELETE'])
-def deleteBandit(bandit_id):
-	
-	bandit = db.hget("bandits", bandit_id)
+def delete_bandit(bandit_id):		
 
-	# if bad bandit ID, throw 404 error
-	if bandit == None:
+	try:
+		bandit_dict = eval(db.hget("bandits", bandit_id))
+	except TypeError:
 		abort(404)
 
 	db.hdel("bandits", bandit_id)
@@ -140,14 +183,14 @@ def deleteBandit(bandit_id):
 	# TODO: add some other stuff here
 	return jsonify( { 'result': True } )
 
-
+#---------------------------------------------
 # error handling
+# --------------------------------------------
+
 @app.errorhandler(404)
 def not_found(error):
 	return make_response(jsonify( { 'Error': 'Not found'} ), 404)
 
-
-# error handling
 @app.errorhandler(401)
 def missing_params(error):
-	return make_response(jsonify( { 'Error': 'Missing parameters'} ), 401)
+	return make_response(jsonify( { 'Error': 'Missing or improper parameters'} ), 401)

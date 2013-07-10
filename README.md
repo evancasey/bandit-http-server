@@ -61,7 +61,7 @@ $ curl -i -H "Content-Type: application/json" -X PUT -d '{"reward":1}' http://lo
 #### Deleting a Bandit:
 
 ```
-$ curl -i -H "Content-Type: application/json" -X DELETE -d '{"reward":5000}' http://localhost:5000/api/v1.0/bandits/1
+$ curl -i -H "Content-Type: application/json" -X DELETE -d http://localhost:5000/api/v1.0/bandits/1
 ```
 
 

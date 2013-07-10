@@ -6,13 +6,6 @@ from algorithms import epsilon_greedy, softmax
 import pdb
 import json
 
-def set_bandit(bandit):
-	# helper method to initialize the correct bandit class object
-	return {
-		'egreedy' : epsilon_greedy.EpsilonGreedy(bandit),
-		'softmax' : softmax.Softmax(bandit)
-	}[bandit['algo_type']]
-
 #---------------------------------------------
 # api routes
 # --------------------------------------------
@@ -170,6 +163,17 @@ def update_arm(bandit_id, arm_id):
 	# TODO: add some other stuff here
 	return jsonify( { bandit_id : bandit_dict['arms'] } )
 
+#---------------------------------------------
+# bandit class methods
+# --------------------------------------------
+
+def set_bandit(bandit):
+	# helper method to initialize the correct bandit class object
+	return {
+		'egreedy' : epsilon_greedy.EpsilonGreedy(bandit),
+		'softmax' : softmax.Softmax(bandit)
+	}[bandit['algo_type']]
+
 @app.route("/api/v1.0/bandits/<int:bandit_id>", methods = ['DELETE'])
 def delete_bandit(bandit_id):		
 
@@ -182,10 +186,6 @@ def delete_bandit(bandit_id):
 
 	# TODO: add some other stuff here
 	return jsonify( { 'result': True } )
-
-#---------------------------------------------
-# error handling
-# --------------------------------------------
 
 @app.errorhandler(404)
 def not_found(error):

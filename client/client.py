@@ -2,27 +2,37 @@ import urlparse
 import urllib
 import urllib2
 import json
+import pdb
 
+#---------------------------------------------
+# bandit api client
+# --------------------------------------------
+
+#TODO: algo_get, bandit_arm_update
 class BanditClient():
+
     def __init__(self, host="localhost:5000", api_version="1.0"):
         self.host = host
         self.api_version = api_version
     
     #-------------------------- API METHODS WRAPPERS--------------------------------------#
         
-    def bandit_create(self, exp_name=None, arm_count=None, algo="egreedy", budget_type="trials", budget=1000, epsilon=0.1, reward_type="click"):
-    
+    # create a new bandit experiment    
+    def bandit_create(self, name=None, arm_count=None, algo_type="egreedy", budget_type="trials", \
+                    budget=1000, epsilon=0.1, reward_type="click"):    
+        ''' create a new bandit experiment '''
         params = {
-            "name" : exp_name,
+            "name" : name,
             "arm_count" : arm_count,
-            "algo_type" : algo,
+            "algo_type" : algo_type,
             "budget_type" : budget_type,
             "budget" : budget,
             "epsilon" : epsilon,
             "reward_type" : reward_type
         }
+
         return self._do_post_request(resource="bandits", param_dict=params)
-        
+
     # list status of a running bandit
     def bandit_get(self, bandit_id):
         resource = "bandits/%d" % (bandit_id)
@@ -58,7 +68,8 @@ class BanditClient():
         # build query string from param dictionary
         param_str = "&".join(["%s=%s" % (k,v) for k,v in param_dict.iteritems()])
         req_url = urlparse.urlunparse(["http", self.host, "api/v%s/%s" % (self.api_version,resource), "", param_str, ""])
-        print "req_url=%s" % (req_url)        
+        pdb.set_trace()
+        return urllib2.urlopen(req_url)        
         
             
     def _do_post_request(self, resource, param_dict):
@@ -69,7 +80,11 @@ class BanditClient():
                        
         req = urllib2.Request(req_url, data=json.dumps(param_dict))
         req.add_header('Content-Type', 'application/json')
-        return opener.open(req)
+
+        try:
+            return opener.open(req)
+        except urllib2.HTTPError, err:
+            return parse_errors(err)
     
     def _do_put_request(self, resource, param_dict):
         req_url = urlparse.urlunparse(["http", self.host, "api/v%s/%s" % (self.api_version, resource), "", "", ""]) 
@@ -83,18 +98,16 @@ class BanditClient():
         
   
         return opener.open(req).read()
+
+#---------------------------------------------
+# error parsing
+# --------------------------------------------
+
+def parse_errors(err):
+    if err.code == 404:
+        return 'HTTPError: 404'
+    if err.code == 401:
+        return 'HTTPError: 401'
         
 
         
-        
-        
-if __name__ == "__main__":
-    # check output here, turn into unit tests
-    #bc = BanditClient()
-    #print bc.bandit_create(exp_name = "my experiment", arm_count=4).read()
-    #bc.bandit_get(1)
-    #bc.arm_get(2,3)
-    #bc.arm_get_current(5)
-    #bc.bandit_update(6)
-    
-    

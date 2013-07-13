@@ -13,8 +13,6 @@ from app import app, init_db
 sys.path.insert(0, '../client/')
 from client import BanditClient
 
-db = init_db()
-
 class BanditUnitTest(unittest.TestCase):
 
 	@classmethod
@@ -29,8 +27,7 @@ class BanditUnitTest(unittest.TestCase):
 		self.client = BanditClient()
 
 		# clear the db
-		db.flushdb() 
-		self.db = db
+		init_db().flushdb()
 
 	@classmethod
 	def tearDownClass(self):	
@@ -39,28 +36,26 @@ class BanditUnitTest(unittest.TestCase):
 
 class BanditClientTests(BanditUnitTest):
 	
-	@classmethod
+
 	def setUp(self):
 		rv = self.client.bandit_create(name = "my experiment", arm_count=4)	
 
 	def test_bandit_create(self):
 
 		# test create works with good params
-		rv = self.client.bandit_create(name = "my experiment", arm_count=4)		
+		rv = self.client.bandit_create(name = "success", arm_count=4)		
 		assert isinstance(rv, dict)
-		assert rv['name'] == "my experiment"
+		assert rv['name'] == "created test"
 		print rv	
 
 		# test create fails with bad params
-		rv = self.client.bandit_create(name = "my experiment")
+		rv = self.client.bandit_create(name = "fail")
 		assert 'HTTPError: 401' in rv
 
 	def test_bandit_get(self):
 
 		# test get bandit works with good params
-		
 		rv = self.client.bandit_get(1)
-		print type(rv)
 		assert isinstance(rv, dict)
 		assert rv['name'] == "my experiment"
 
@@ -69,7 +64,7 @@ class BanditClientTests(BanditUnitTest):
 
 	@classmethod
 	def tearDown(self):
-		pass
+		init_db().flushdb()
 
 
 if __name__ == '__main__':

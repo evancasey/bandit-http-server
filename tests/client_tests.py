@@ -3,22 +3,39 @@ import sys
 import pdb
 import unittest
 import tempfile
-from launch import db
+import time
+import subprocess
+import signal
+
+sys.path.insert(0, '../')
+from app import app, init_db
 
 sys.path.insert(0, '../client/')
 from client import BanditClient
+
+db = init_db()
 
 class BanditUnitTest(unittest.TestCase):
 
 	@classmethod
 	def setUpClass(self):
-		db.flushdb() #clear the db
-		self.db = db	
-		self.client = BanditClient()				
+
+		# run main.py will args = "--test",
+		cmd = "python ../main.py --test"
+		self.p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True, preexec_fn=os.setsid)		
+		time.sleep(3)		
+
+		# set the python wrapper to client
+		self.client = BanditClient()
+
+		# clear the db
+		db.flushdb() 
+		self.db = db
 
 	@classmethod
-	def tearDownClass(self):
-		pass
+	def tearDownClass(self):	
+		# kill the process	
+		os.killpg(self.p.pid, signal.SIGTERM)
 
 class BanditClientTests(BanditUnitTest):
 	
@@ -53,7 +70,6 @@ class BanditClientTests(BanditUnitTest):
 	@classmethod
 	def tearDown(self):
 		pass
-
 
 
 if __name__ == '__main__':

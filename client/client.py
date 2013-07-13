@@ -36,7 +36,7 @@ class BanditClient():
     # list status of a running bandit
     def bandit_get(self, bandit_id):
         resource = "bandits/%d" % (bandit_id)
-        res = self._do_get_request(resource=resource, param_dict={})
+        return self._do_get_request(resource=resource, param_dict={})
         
     # list bandit algorithms
     def algo_get(self):
@@ -45,11 +45,11 @@ class BanditClient():
     # status of an arm within a bandit (arm ids are unique)
     def arm_get(self, bandit_id, arm_id):
         resource = "bandits/%d/arms/%d" % (bandit_id, arm_id)
-        res = self._do_get_request(resource=resource, param_dict={})
+        return self._do_get_request(resource=resource, param_dict={})
         
     def arm_get_current(self, bandit_id):
         resource = "bandits/%d/arms/current" % bandit_id
-        res = self._do_get_request(resource=resource, param_dict={})
+        return self._do_get_request(resource=resource, param_dict={})
    
     def bandit_update(self, bandit_id=None, exp_name=None, n_arms=None, algo=None, horizon_type=None, \
                      horizon_value=None, epsilon=None, reward_type=None):
@@ -58,7 +58,7 @@ class BanditClient():
             "exp_name": exp_name,
             "n_arms":n_arms
         }
-        res = self._do_put_request(resource=resource, param_dict=params)
+        return self._do_put_request(resource=resource, param_dict=params)
         
        
         
@@ -68,9 +68,11 @@ class BanditClient():
         # build query string from param dictionary
         param_str = "&".join(["%s=%s" % (k,v) for k,v in param_dict.iteritems()])
         req_url = urlparse.urlunparse(["http", self.host, "api/v%s/%s" % (self.api_version,resource), "", param_str, ""])
-        pdb.set_trace()
-        return urllib2.urlopen(req_url)        
         
+        try:
+            return eval(urllib2.urlopen(req_url).read())
+        except urllib2.HTTPError, err:
+            return parse_errors(err)
             
     def _do_post_request(self, resource, param_dict):
         req_url = urlparse.urlunparse(["http", self.host, "api/v%s/%s" % (self.api_version, resource), "", "", ""]) 
@@ -82,7 +84,7 @@ class BanditClient():
         req.add_header('Content-Type', 'application/json')
 
         try:
-            return opener.open(req)
+            return eval(opener.open(req).read())
         except urllib2.HTTPError, err:
             return parse_errors(err)
     
@@ -96,8 +98,10 @@ class BanditClient():
         req.add_header('Content-Type', 'application/json')
         req.get_method= lambda: 'PUT'
         
-  
-        return opener.open(req).read()
+        try:
+            return eval(opener.open(req).read())
+        except urllib2.HTTPError, err:
+            return parse_errors(err)
 
 #---------------------------------------------
 # error parsing

@@ -1,10 +1,14 @@
 import os
-from flask import request, session, url_for, jsonify, abort, make_response
-from app import app, db
+import sys
+from flask import request, session, url_for, jsonify, abort, make_response, _app_ctx_stack
+from app import app, init_db
 from models import arm_keys, bandit_keys
 from algorithms import epsilon_greedy, softmax
 import pdb
 import json
+
+with app.app_context():
+	db = init_db()
 
 #---------------------------------------------
 # api routes
@@ -46,7 +50,7 @@ def create_bandit():
 
 	arms = {}
 	for i in range(request.json['arm_count']):
-		arms[arm_keys()] = {
+		arms[arm_keys(db)] = {
 			'value': 0,
 			'count': 0
 		}
@@ -67,7 +71,7 @@ def create_bandit():
 		'regret': 0
 	}
 
-	db.hset("bandits", bandit_keys(), json.dumps(bandit))
+	db.hset("bandits", bandit_keys(db), json.dumps(bandit))
 
 	return jsonify( { "name" : bandit['name'], "bandit_id" : db.hget("unique_ids", "bandit"), "arm_ids" : bandit['arms'].keys()} ), 201
 
@@ -163,17 +167,6 @@ def update_arm(bandit_id, arm_id):
 	# TODO: add some other stuff here
 	return jsonify( { bandit_id : bandit_dict['arms'] } )
 
-#---------------------------------------------
-# bandit class methods
-# --------------------------------------------
-
-def set_bandit(bandit):
-	# helper method to initialize the correct bandit class object
-	return {
-		'egreedy' : epsilon_greedy.EpsilonGreedy(bandit),
-		'softmax' : softmax.Softmax(bandit)
-	}[bandit['algo_type']]
-
 @app.route("/api/v1.0/bandits/<int:bandit_id>", methods = ['DELETE'])
 def delete_bandit(bandit_id):		
 
@@ -194,3 +187,14 @@ def not_found(error):
 @app.errorhandler(401)
 def missing_params(error):
 	return make_response(jsonify( { 'Error': 'Missing or improper parameters'} ), 401)
+
+#---------------------------------------------
+# bandit class methods
+# --------------------------------------------
+
+def set_bandit(bandit):
+	# helper method to initialize the correct bandit class object
+	return {
+		'egreedy' : epsilon_greedy.EpsilonGreedy(bandit),
+		'softmax' : softmax.Softmax(bandit)
+	}[bandit['algo_type']]

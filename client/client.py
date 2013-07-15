@@ -94,6 +94,7 @@ class BanditClient():
         req.add_header('Content-Type', 'application/json')
 
         try:
+            print opener.open(req).read()
             return eval(opener.open(req).read())
         except urllib2.HTTPError, err:
             return parse_errors(err)

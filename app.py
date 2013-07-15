@@ -30,7 +30,6 @@ def init_db(*args, **kwargs):
 def get_db(*args, **kwargs):
 	with kwargs["app"].app_context():
 		db = getattr(g, 'db', None)
-
 		if db is None:
 			db = init_db(type = kwargs["type"])
 		return db

@@ -20,7 +20,7 @@ def categorical_draw(probs):
 
 class Softmax:
     def __init__(self, bandit):
-        self.temperature = bandit['temperature']
+        self.epsilon = bandit['epsilon']
         self.counts = {}
         self.values = {}
         for k,v in bandit['arms'].iteritems():
@@ -33,8 +33,8 @@ class Softmax:
         return
   
     def select_arm(self):
-        z = sum([math.exp(int(v) / self.temperature) for v in self.values])
-        probs = [math.exp(int(v) / self.temperature) / z for v in self.values]
+        z = sum([math.exp(int(v) / self.epsilon) for v in self.values])
+        probs = [math.exp(int(v) / self.epsilon) / z for v in self.values]
         return categorical_draw(probs)
 
     def update(self, chosen_arm, reward):

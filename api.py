@@ -1,6 +1,6 @@
 import os
 import sys
-from flask import request, session, url_for, jsonify, abort, make_response, _app_ctx_stack
+from flask import request, session, url_for, jsonify, abort, make_response, _app_ctx_stack, g
 from app import app, init_db
 from models import arm_keys, bandit_keys
 from algorithms import epsilon_greedy, softmax
@@ -8,8 +8,9 @@ import pdb
 import json
 
 # initialize the redis instance on start
-with app.app_context():
-	db = init_db()
+@app.before_request
+def before_request():
+	g.db = init_db()
 
 #---------------------------------------------
 # api routes
@@ -32,26 +33,26 @@ def create_bandit():
 		or (request.json['reward_type'] not in ('click')):
 		abort(401)
 
-	# if algo_type is egreedy and epsilon is improper or not given, throw a 401 error
-	if request.json['algo_type'] == 'egreedy':
-		if not 'epsilon' in request.json.keys():
-			abort(401)
-		elif (request.json['epsilon'] <= 0.0):
-			abort(401)
+	# # if algo_type is egreedy and epsilon is improper or not given, throw a 401 error
+	# if request.json['algo_type'] == 'egreedy':
+	# 	if not 'epsilon' in request.json.keys():
+	# 		abort(401)
+	# 	elif (request.json['epsilon'] <= 0.0):
+	# 		abort(401)
 
-	# if algo_type is softmax is improper or not given, throw a 401 error
-	if request.json['algo_type'] == 'softmax':
-		if not 'temperature' in request.json.keys():
-			abort(401)
-		elif (request.json['temperature'] <= 0.0):
-			abort(401)
+	# # if algo_type is softmax is improper or not given, throw a 401 error
+	# if request.json['algo_type'] == 'softmax':
+	# 	if not 'temperature' in request.json.keys():
+	# 		abort(401)
+	# 	elif (request.json['temperature'] <= 0.0):
+	# 		abort(401)
 
 	if request.json['reward_type'] in ('click'):
 		max_reward = 1
 
 	arms = {}
 	for i in range(request.json['arm_count']):
-		arms[arm_keys(db)] = {
+		arms[arm_keys(g.db)] = {
 			'value': 0,
 			'count': 0
 		}
@@ -63,8 +64,7 @@ def create_bandit():
 		'algo_type': request.json['algo_type'],
 		'budget_type': request.json['budget_type'],
 		'budget': request.json['budget'],
-		'epsilon': request.json.get('epsilon', ""), # egreedy
-		'temperature': request.json.get('temperature', ""), # softmax		
+		'epsilon': request.json.get('epsilon', ""), # egreedy	
 		'reward_type': request.json['reward_type'],
 		'max_reward': max_reward,
 		'total_reward': 0,
@@ -72,8 +72,8 @@ def create_bandit():
 		'regret': 0
 	}
 
-	bandit_id = bandit_keys(db)
-	db.hset("bandits", bandit_id, json.dumps(bandit))
+	bandit_id = bandit_keys(g.db)
+	g.db.hset("bandits", bandit_id, json.dumps(bandit))
 
 	return jsonify( {"bandit_id" : int(bandit_id), "name" : bandit['name'], "arm_ids" : bandit['arms'].keys()} ), 201
 
@@ -82,7 +82,7 @@ def get_bandit(bandit_id):
 	''' Lookup a bandit by its ID '''
 
 	try:
-		bandit_dict = eval(db.hget("bandits", bandit_id))
+		bandit_dict = eval(g.db.hget("bandits", bandit_id))
 	except TypeError:
 		abort(404)
 
@@ -93,7 +93,7 @@ def get_current_arm(bandit_id):
 	''' Get the bandit's "best" arm '''
 
 	try:
-		bandit_dict = eval(db.hget("bandits", bandit_id))
+		bandit_dict = eval(g.db.hget("bandits", bandit_id))
 	except TypeError:
 		abort(404)
 
@@ -107,14 +107,14 @@ def get_current_arm(bandit_id):
 
 @app.route("/api/v1.0/bandits/<int:bandit_id>", methods = ['PUT'])
 def update_bandit(bandit_id):
-	''' Update a bandit's name, algo_type, budget_type, budget, epsilon, temperature, reward_type, or max_reward '''
+	''' Update a bandit's name, algo_type, budget_type, budget, epsilon, reward_type, or max_reward '''
 
 	# if not a json request throw a 400 error
 	if not request.json:
 		abort(400)
 
 	try:
-		bandit_dict = eval(db.hget("bandits", bandit_id))
+		bandit_dict = eval(g.db.hget("bandits", bandit_id))
 	except TypeError:
 		abort(404)
 
@@ -127,12 +127,11 @@ def update_bandit(bandit_id):
 	bandit_dict['reward_type'] = request.json.get('reward_type', bandit_dict['reward_type'])
 	bandit_dict['max_reward'] = request.json.get('max_reward', bandit_dict['max_reward'])
 
-	db.hset("bandits", bandit_id, bandit_dict)
+	g.db.hset("bandits", bandit_id, bandit_dict)
 
 	# TODO: add some other stuff here
 	return jsonify( {"bandit_id" : bandit_id, "name" : bandit_dict['name'], "algo_type" : bandit_dict['algo_type'], "budget_type" : bandit_dict['budget_type'], \
-		"budget" : bandit_dict["budget"], "epsilon" : bandit_dict["epsilon"], "temperature" : bandit_dict["temperature"], "reward_type" : bandit_dict["reward_type"], \
-		"max_reward" : bandit_dict["max_reward"]} )
+		"budget" : bandit_dict["budget"], "epsilon" : bandit_dict["epsilon"], "reward_type" : bandit_dict["reward_type"], "max_reward" : bandit_dict["max_reward"]} )
 
 @app.route("/api/v1.0/bandits/<int:bandit_id>/arms/<int:arm_id>", methods = ['PUT'])
 def update_arm(bandit_id, arm_id):
@@ -146,7 +145,7 @@ def update_arm(bandit_id, arm_id):
 		abort(401)
 
 	try:
-		bandit_dict = eval(db.hget("bandits", bandit_id))
+		bandit_dict = eval(g.db.hget("bandits", bandit_id))
 		arm = bandit_dict['arms'][str(arm_id)]	
 	except TypeError:
 		abort(404)
@@ -166,7 +165,7 @@ def update_arm(bandit_id, arm_id):
 	bandit_dict['total_reward'] = bandit.total_reward
 	bandit_dict['total_count'] = bandit.total_count
 
-	db.hset("bandits",bandit_id, bandit_dict)
+	g.db.hset("bandits",bandit_id, bandit_dict)
 
 	# TODO: add some other stuff here
 	return jsonify( { bandit_id : bandit_dict['arms'] } )
@@ -175,11 +174,11 @@ def update_arm(bandit_id, arm_id):
 def delete_bandit(bandit_id):		
 
 	try:
-		bandit_dict = eval(db.hget("bandits", bandit_id))
+		bandit_dict = eval(g.db.hget("bandits", bandit_id))
 	except TypeError:
 		abort(404)
 
-	db.hdel("bandits", bandit_id)
+	g.db.hdel("bandits", bandit_id)
 
 	# TODO: add some other stuff here
 	return jsonify( { 'result': True } )

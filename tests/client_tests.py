@@ -8,7 +8,7 @@ import subprocess
 import signal
 
 sys.path.insert(0, '../')
-from app import app, init_db
+from app import app, get_db
 
 sys.path.insert(0, '../client/')
 from client import BanditClient
@@ -25,8 +25,9 @@ class BanditUnitTest(unittest.TestCase):
 		# set the python wrapper to client
 		self.client = BanditClient()
 
-		# clear the db
-		init_db().flushdb()
+		# connect to the test db
+		self.db = get_db(app = app, type = "test")
+		self.db.flushdb()
 
 	@classmethod
 	def tearDownClass(self):	
@@ -41,7 +42,7 @@ class BanditClientTests(BanditUnitTest):
 
 	def test_create_bandit(self):
 
-		init_db().flushdb()
+		self.db.flushdb()
 
 		# test create works with good params
 		bandit_id = 1
@@ -119,12 +120,10 @@ class BanditClientTests(BanditUnitTest):
 		assert 'HTTPError: 401' in rv
 
 
-
-
 	@classmethod
 	def tearDown(self):
 		# clear the db
-		init_db().flushdb()
+		self.db.flushdb()
 
 
 if __name__ == '__main__':

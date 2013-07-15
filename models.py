@@ -1,8 +1,5 @@
 import sys
-from app import app, init_db
-
-with app.app_context():
-	db = init_db()
+from app import app, init_db, g
 
 #---------------------------------------------
 # models

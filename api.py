@@ -7,6 +7,7 @@ from algorithms import epsilon_greedy, softmax
 import pdb
 import json
 
+# initialize the redis instance on start
 with app.app_context():
 	db = init_db()
 
@@ -71,9 +72,10 @@ def create_bandit():
 		'regret': 0
 	}
 
-	db.hset("bandits", bandit_keys(db), json.dumps(bandit))
+	bandit_id = bandit_keys(db)
+	db.hset("bandits", bandit_id, json.dumps(bandit))
 
-	return jsonify( { "name" : bandit['name'], "bandit_id" : db.hget("unique_ids", "bandit"), "arm_ids" : bandit['arms'].keys()} ), 201
+	return jsonify( {"bandit_id" : int(bandit_id), "name" : bandit['name'], "arm_ids" : bandit['arms'].keys()} ), 201
 
 @app.route("/api/v1.0/bandits/<int:bandit_id>", methods = ['GET'])
 def get_bandit(bandit_id):
@@ -84,7 +86,7 @@ def get_bandit(bandit_id):
 	except TypeError:
 		abort(404)
 
-	return jsonify( { 'name' : bandit_dict['name'], 'total_reward' : bandit_dict['total_reward'], 'total_count' : bandit_dict['total_count'], 'regret' : bandit_dict['regret'] } )
+	return jsonify( { "bandit_id" : bandit_id, 'name' : bandit_dict['name'], 'total_reward' : bandit_dict['total_reward'], 'total_count' : bandit_dict['total_count'], 'regret' : bandit_dict['regret']} )
 
 @app.route("/api/v1.0/bandits/<int:bandit_id>/arms/current", methods = ['GET'])
 def get_current_arm(bandit_id):
@@ -96,12 +98,12 @@ def get_current_arm(bandit_id):
 		abort(404)
 
 	# initialize the bandit class object
-	bandit = set_bandit(bandit_dict)
+	bandit = _set_bandit(bandit_dict)
 
 	# find the "best" arm
 	current_arm = bandit.select_arm()
 
-	return jsonify( { 'current_arm' : current_arm } )
+	return jsonify( { 'bandit_id' : bandit_id, 'current_arm' : current_arm } )
 
 @app.route("/api/v1.0/bandits/<int:bandit_id>", methods = ['PUT'])
 def update_bandit(bandit_id):
@@ -122,14 +124,15 @@ def update_bandit(bandit_id):
 	bandit_dict['budget_type'] = request.json.get('budget_type', bandit_dict['budget_type'])
 	bandit_dict['budget'] = request.json.get('budget', bandit_dict['budget'])
 	bandit_dict['epsilon'] = request.json.get('epsilon', bandit_dict['epsilon'])
-	bandit_dict['temperature'] = request.json.get('temperature', bandit_dict['temperature'])
 	bandit_dict['reward_type'] = request.json.get('reward_type', bandit_dict['reward_type'])
 	bandit_dict['max_reward'] = request.json.get('max_reward', bandit_dict['max_reward'])
 
 	db.hset("bandits", bandit_id, bandit_dict)
 
 	# TODO: add some other stuff here
-	return jsonify(bandit_dict)
+	return jsonify( {"bandit_id" : bandit_id, "name" : bandit_dict['name'], "algo_type" : bandit_dict['algo_type'], "budget_type" : bandit_dict['budget_type'], \
+		"budget" : bandit_dict["budget"], "epsilon" : bandit_dict["epsilon"], "temperature" : bandit_dict["temperature"], "reward_type" : bandit_dict["reward_type"], \
+		"max_reward" : bandit_dict["max_reward"]} )
 
 @app.route("/api/v1.0/bandits/<int:bandit_id>/arms/<int:arm_id>", methods = ['PUT'])
 def update_arm(bandit_id, arm_id):
@@ -151,11 +154,12 @@ def update_arm(bandit_id, arm_id):
 		abort(404)
 
 	# initialize the bandit algo class object
-	bandit = set_bandit(bandit_dict)
+	bandit = _set_bandit(bandit_dict)
 
-	# update the arm
+	# call an algo to update an arm
 	bandit.update(str(arm_id), request.json['reward'])	
 
+	# update the bandit's arm with the values update returns
 	bandit_dict['arms'][str(arm_id)]['count'] = bandit.counts[str(arm_id)]
 	bandit_dict['arms'][str(arm_id)]['value'] = bandit.values[str(arm_id)]
 	bandit_dict['regret'] = bandit.regret
@@ -192,7 +196,7 @@ def missing_params(error):
 # bandit class methods
 # --------------------------------------------
 
-def set_bandit(bandit):
+def _set_bandit(bandit):
 	# helper method to initialize the correct bandit class object
 	return {
 		'egreedy' : epsilon_greedy.EpsilonGreedy(bandit),

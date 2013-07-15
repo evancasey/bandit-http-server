@@ -51,21 +51,31 @@ class BanditClient():
         resource = "bandits/%d/arms/current" % bandit_id
         return self._do_get_request(resource=resource, param_dict={})
    
-    def bandit_update(self, bandit_id=None, exp_name=None, n_arms=None, algo=None, horizon_type=None, \
-                     horizon_value=None, epsilon=None, reward_type=None):
+    def bandit_update(self, bandit_id=None, name=None, arm_count=None, algo_type=None, budget_type=None, \
+                     budget_value=None, epsilon=None, reward_type=None):
         resource = "bandits/%d" % bandit_id
         params = {
-            "exp_name": exp_name,
-            "n_arms":n_arms
+            "name" : name,
+            "arm_count" : arm_count,
+            "algo_type" : algo_type,
+            "budget_type" : budget_type,
+            "budget_value" : budget_value,
+            "epsilon" : epsilon,
+            "reward_type" : reward_type
+
         }
         return self._do_put_request(resource=resource, param_dict=params)
+
+    def arm_update(self, bandit_id = None, arm_id = None, reward = None):
+        resource = "bandits/%d/arms/%d" % (bandit_id, arm_id)
+        params = { "reward" : reward }
+        return self._do_get_request(resource=resource, param_dict=params)
         
        
         
     #-------------------- LOW LEVEL REQUEST METHODS -----------------------------------#
     
     def _do_get_request(self, resource, param_dict):
-        # build query string from param dictionary
         param_str = "&".join(["%s=%s" % (k,v) for k,v in param_dict.iteritems()])
         req_url = urlparse.urlunparse(["http", self.host, "api/v%s/%s" % (self.api_version,resource), "", param_str, ""])
         

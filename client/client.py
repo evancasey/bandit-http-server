@@ -66,10 +66,10 @@ class BanditClient():
         }
         return self._do_put_request(resource=resource, param_dict=params)
 
-    def arm_update(self, bandit_id = None, arm_id = None, reward = None):
+    def arm_update(self, bandit_id=None, arm_id=None, reward = None):
         resource = "bandits/%d/arms/%d" % (bandit_id, arm_id)
         params = { "reward" : reward }
-        return self._do_get_request(resource=resource, param_dict=params)
+        return self._do_put_request(resource=resource, param_dict=params)
         
        
         
@@ -93,8 +93,7 @@ class BanditClient():
         req = urllib2.Request(req_url, data=json.dumps(param_dict))
         req.add_header('Content-Type', 'application/json')
 
-        try:
-            print opener.open(req).read()
+        try:            
             return eval(opener.open(req).read())
         except urllib2.HTTPError, err:
             return parse_errors(err)
@@ -110,7 +109,7 @@ class BanditClient():
         req.get_method= lambda: 'PUT'
         
         try:
-            return eval(opener.open(req).read())
+            result = eval(opener.open(req).read())            
         except urllib2.HTTPError, err:
             return parse_errors(err)
 

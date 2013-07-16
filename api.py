@@ -86,7 +86,8 @@ def get_bandit(bandit_id):
 	except TypeError:
 		abort(404)
 
-	return jsonify( { "bandit_id" : bandit_id, 'name' : bandit_dict['name'], 'total_reward' : bandit_dict['total_reward'], 'total_count' : bandit_dict['total_count'], 'regret' : bandit_dict['regret']} )
+	return jsonify( { "bandit_id" : bandit_id, 'name' : bandit_dict['name'], 'total_reward' : bandit_dict['total_reward'], \
+		'total_count' : bandit_dict['total_count'], 'regret' : bandit_dict['regret']} )
 
 @app.route("/api/v1.0/bandits/<int:bandit_id>/arms/current", methods = ['GET'])
 def get_current_arm(bandit_id):
@@ -130,8 +131,9 @@ def update_bandit(bandit_id):
 	g.db.hset("bandits", bandit_id, bandit_dict)
 
 	# TODO: add some other stuff here
-	return jsonify( {"bandit_id" : bandit_id, "name" : bandit_dict['name'], "algo_type" : bandit_dict['algo_type'], "budget_type" : bandit_dict['budget_type'], \
-		"budget" : bandit_dict["budget"], "epsilon" : bandit_dict["epsilon"], "reward_type" : bandit_dict["reward_type"], "max_reward" : bandit_dict["max_reward"]} )
+	return jsonify( {"bandit_id" : bandit_id, "name" : bandit_dict['name'], "algo_type" : bandit_dict['algo_type'], \
+		"budget_type" : bandit_dict['budget_type'], "budget" : bandit_dict["budget"], "epsilon" : bandit_dict["epsilon"], \
+		"reward_type" : bandit_dict["reward_type"], "max_reward" : bandit_dict["max_reward"]} )
 
 @app.route("/api/v1.0/bandits/<int:bandit_id>/arms/<int:arm_id>", methods = ['PUT'])
 def update_arm(bandit_id, arm_id):
@@ -168,7 +170,8 @@ def update_arm(bandit_id, arm_id):
 	g.db.hset("bandits",bandit_id, bandit_dict)
 
 	# TODO: add some other stuff here
-	return jsonify( { bandit_id : bandit_dict['arms'] } )
+	return jsonify( { "bandit_id" : bandit_id, "regret" : bandit_dict['regret'], "total_reward" : bandit_dict["total_reward"], \
+		"total_count" : bandit_dict['total_count'], "arms": bandit_dict['arms'] } )
 
 @app.route("/api/v1.0/bandits/<int:bandit_id>", methods = ['DELETE'])
 def delete_bandit(bandit_id):		

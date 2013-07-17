@@ -1,51 +1,31 @@
 import os
 import sys
-from flask import request, session, url_for, jsonify, abort, make_response, _app_ctx_stack, g
-from app import app, init_db
-from models import arm_keys, bandit_keys
-from algorithms import epsilon_greedy, softmax
 import pdb
 import json
 
-# initialize the redis instance on start
+from flask import request, session, url_for, jsonify, make_response, _app_ctx_stack, g
+from app import app, get_db
+from models import arm_keys, bandit_keys
+from algorithms import epsilon_greedy, softmax
+from lib import validations
+
+
 @app.before_request
 def before_request():
-	g.db = init_db()
+	''' Initialize the redis db before each request '''
 
-#---------------------------------------------
-# api routes
-# --------------------------------------------
+	g.db = get_db(app = app)
+
 
 @app.route("/api/v1.0/bandits", methods = ['POST'])
 def create_bandit():
 	''' Create a new bandit experiment '''
 
 	# if not a json request throw a 400 error
-	if not request.json:
-		abort(400)
+	validations.json_request(request)
 
 	# if params not given or improper, throw a 401 error
-	if not all (p in request.json for p in ('name','arm_count','algo_type','budget_type','budget', 'reward_type')) \
-		or (request.json['arm_count'] < 0) \
-		or (request.json['algo_type'] not in ('egreedy','softmax')) \
-		or (request.json['budget_type'] not in ('trials')) \
-		or (request.json['budget'] < 0) \
-		or (request.json['reward_type'] not in ('click')):
-		abort(401)
-
-	# # if algo_type is egreedy and epsilon is improper or not given, throw a 401 error
-	# if request.json['algo_type'] == 'egreedy':
-	# 	if not 'epsilon' in request.json.keys():
-	# 		abort(401)
-	# 	elif (request.json['epsilon'] <= 0.0):
-	# 		abort(401)
-
-	# # if algo_type is softmax is improper or not given, throw a 401 error
-	# if request.json['algo_type'] == 'softmax':
-	# 	if not 'temperature' in request.json.keys():
-	# 		abort(401)
-	# 	elif (request.json['temperature'] <= 0.0):
-	# 		abort(401)
+	validations.create_params(request)
 
 	if request.json['reward_type'] in ('click'):
 		max_reward = 1
@@ -77,26 +57,26 @@ def create_bandit():
 
 	return jsonify( {"bandit_id" : int(bandit_id), "name" : bandit['name'], "arm_ids" : bandit['arms'].keys()} ), 201
 
+
 @app.route("/api/v1.0/bandits/<int:bandit_id>", methods = ['GET'])
 def get_bandit(bandit_id):
 	''' Lookup a bandit by its ID '''
 
-	try:
-		bandit_dict = eval(g.db.hget("bandits", bandit_id))
-	except TypeError:
-		abort(404)
+	# if bandit exists, find it
+	if validations.bandit_exists(bandit_id, g.db):
+		bandit_dict = eval(g.db.hget("bandits", bandit_id)) 
 
 	return jsonify( { "bandit_id" : bandit_id, 'name' : bandit_dict['name'], 'total_reward' : bandit_dict['total_reward'], \
 		'total_count' : bandit_dict['total_count'], 'regret' : bandit_dict['regret']} )
+
 
 @app.route("/api/v1.0/bandits/<int:bandit_id>/arms/current", methods = ['GET'])
 def get_current_arm(bandit_id):
 	''' Get the bandit's "best" arm '''
 
-	try:
-		bandit_dict = eval(g.db.hget("bandits", bandit_id))
-	except TypeError:
-		abort(404)
+	# if bandit exists, find it
+	if validations.bandit_exists(bandit_id, g.db):
+		bandit_dict = eval(g.db.hget("bandits", bandit_id)) 
 
 	# initialize the bandit class object
 	bandit = _set_bandit(bandit_dict)
@@ -106,18 +86,17 @@ def get_current_arm(bandit_id):
 
 	return jsonify( { 'bandit_id' : bandit_id, 'current_arm' : current_arm } )
 
+
 @app.route("/api/v1.0/bandits/<int:bandit_id>", methods = ['PUT'])
 def update_bandit(bandit_id):
 	''' Update a bandit's name, algo_type, budget_type, budget, epsilon, reward_type, or max_reward '''
 
 	# if not a json request throw a 400 error
-	if not request.json:
-		abort(400)
+	validations.json_request(request)
 
-	try:
-		bandit_dict = eval(g.db.hget("bandits", bandit_id))
-	except TypeError:
-		abort(404)
+	# if bandit exists, find it
+	if validations.bandit_exists(bandit_id, g.db):
+		bandit_dict = eval(g.db.hget("bandits", bandit_id)) 
 
 	# update these fields if provided
 	bandit_dict['name'] = request.json.get('name', bandit_dict['name'])
@@ -135,24 +114,20 @@ def update_bandit(bandit_id):
 		"budget_type" : bandit_dict['budget_type'], "budget" : bandit_dict["budget"], "epsilon" : bandit_dict["epsilon"], \
 		"reward_type" : bandit_dict["reward_type"], "max_reward" : bandit_dict["max_reward"]} )
 
+
 @app.route("/api/v1.0/bandits/<int:bandit_id>/arms/<int:arm_id>", methods = ['PUT'])
 def update_arm(bandit_id, arm_id):
 
 	# if not a json request throw a 400 error
-	if not request.json:
-		abort(400)
+	validations.json_request(request)
 
 	# if params not give throw 401 error
-	if not 'reward' in request.json:
-		abort(401)
+	validations.update_arm_params(request)
 
-	try:
-		bandit_dict = eval(g.db.hget("bandits", bandit_id))
-		arm = bandit_dict['arms'][str(arm_id)]	
-	except TypeError:
-		abort(404)
-	except KeyError:
-		abort(404)
+	if validations.bandit_exists(bandit_id, g.db):
+		bandit_dict = eval(g.db.hget("bandits", bandit_id)) 
+		if validations.arm_exists(arm_id, bandit_dict):
+			arm = bandit_dict['arms'][str(arm_id)]	
 
 	# initialize the bandit algo class object
 	bandit = _set_bandit(bandit_dict)
@@ -167,32 +142,24 @@ def update_arm(bandit_id, arm_id):
 	bandit_dict['total_reward'] = bandit.total_reward
 	bandit_dict['total_count'] = bandit.total_count
 
-	g.db.hset("bandits",bandit_id, bandit_dict)
+	g.db.hset("bandits", bandit_id, bandit_dict)
 
 	# TODO: add some other stuff here
 	return jsonify( { "bandit_id" : bandit_id, "regret" : bandit_dict['regret'], "total_reward" : bandit_dict["total_reward"], \
 		"total_count" : bandit_dict['total_count'], "arms": bandit_dict['arms'] } )
 
+
 @app.route("/api/v1.0/bandits/<int:bandit_id>", methods = ['DELETE'])
 def delete_bandit(bandit_id):		
 
-	try:
-		bandit_dict = eval(g.db.hget("bandits", bandit_id))
-	except TypeError:
-		abort(404)
-
+	# if bandit exists, find it
+	if validations.bandit_exists(bandit_id, g.db):
+		bandit_dict = eval(g.db.hget("bandits", bandit_id)) 
 	g.db.hdel("bandits", bandit_id)
 
 	# TODO: add some other stuff here
 	return jsonify( { 'result': True } )
 
-@app.errorhandler(404)
-def not_found(error):
-	return make_response(jsonify( { 'Error': 'Not found'} ), 404)
-
-@app.errorhandler(401)
-def missing_params(error):
-	return make_response(jsonify( { 'Error': 'Missing or improper parameters'} ), 401)
 
 #---------------------------------------------
 # bandit class methods

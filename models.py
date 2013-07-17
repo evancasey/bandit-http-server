@@ -1,5 +1,4 @@
 import sys
-from app import app, init_db, g
 
 #---------------------------------------------
 # models

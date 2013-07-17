@@ -38,14 +38,14 @@ class BanditClient():
         resource = "bandits/%d" % (bandit_id)
         return self._do_get_request(resource=resource, param_dict={})
         
-    # list bandit algorithms
-    def algo_get(self):
-       pass
+    # # list bandit algorithms
+    # def algo_get(self):
+    #    pass
         
-    # status of an arm within a bandit (arm ids are unique)
-    def arm_get(self, bandit_id, arm_id):
-        resource = "bandits/%d/arms/%d" % (bandit_id, arm_id)
-        return self._do_get_request(resource=resource, param_dict={})
+    # # status of an arm within a bandit (arm ids are unique)
+    # def arm_get(self, bandit_id, arm_id):
+    #     resource = "bandits/%d/arms/%d" % (bandit_id, arm_id)
+    #     return self._do_get_request(resource=resource, param_dict={})
         
     def arm_get_current(self, bandit_id):
         resource = "bandits/%d/arms/current" % bandit_id
@@ -64,11 +64,14 @@ class BanditClient():
             "reward_type" : reward_type
 
         }
+
+        params = dict((k,v) for k,v in params.iteritems() if v is not None)
         return self._do_put_request(resource=resource, param_dict=params)
 
     def arm_update(self, bandit_id=None, arm_id=None, reward = None):
         resource = "bandits/%d/arms/%d" % (bandit_id, arm_id)
         params = { "reward" : reward }
+        params = dict((k,v) for k,v in params.iteritems() if v is not None)
         return self._do_put_request(resource=resource, param_dict=params)
         
        
@@ -106,10 +109,10 @@ class BanditClient():
                        
         req = urllib2.Request(req_url, data=json.dumps(param_dict))
         req.add_header('Content-Type', 'application/json')
-        req.get_method= lambda: 'PUT'
+        req.get_method = lambda: 'PUT'
         
         try:
-            result = eval(opener.open(req).read())            
+            return eval(opener.open(req).read())            
         except urllib2.HTTPError, err:
             return parse_errors(err)
 
@@ -122,6 +125,8 @@ def parse_errors(err):
         return 'HTTPError: 404'
     if err.code == 401:
         return 'HTTPError: 401'
+    if err.code == 400:
+        return 'HTTPError: 400'
         
 
         

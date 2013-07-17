@@ -3,6 +3,7 @@ import os
 from optparse import OptionParser
 from app import app, init_db
 from api import *
+import pdb
 
 #---------------------------------------------
 # launch
@@ -11,7 +12,6 @@ from api import *
 if __name__ == "__main__":
 
 	# decide if test or development db
-
 	parser = OptionParser()
 	parser.add_option("--test", action="store_true", dest="test_mode")
 	(options,args) = parser.parse_args()

@@ -20,7 +20,7 @@ def categorical_draw(probs):
 
 class Softmax:
     def __init__(self, bandit):
-        self.epsilon = bandit['epsilon']
+        self.epsilon = float(bandit['epsilon'])
         self.counts = {}
         self.values = {}
         for k,v in bandit['arms'].iteritems():

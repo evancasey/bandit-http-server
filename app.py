@@ -23,7 +23,6 @@ def init_db(*args, **kwargs):
 			sys.exit(0)
 	else:
 		try:	
-			print "DEV"
 			return Redis(host='localhost', port=6379, db=0)
 		except:
 			print "Cannot connect to redis test server.  Exiting..."

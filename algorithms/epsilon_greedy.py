@@ -6,18 +6,18 @@ import pdb
 # by John Myles White https://github.com/johnmyleswhite/BanditsBook/
 # --------------------------------------------
 
-def key_max(x):    
+def key_max(x): 
     return max(x, key = x.get)
 
 class EpsilonGreedy():
 
     def __init__(self, bandit):
-        self.epsilon = bandit['epsilon']
+        self.epsilon = float(bandit['epsilon'])
         self.counts = {}
         self.values = {}
         for k,v in bandit['arms'].iteritems():
             self.counts[k] = v['count']
-            self.values[k] = v['value']            
+            self.values[k] = v['value']  
         self.max_reward = bandit['max_reward']  
         self.total_reward = bandit['total_reward']
         self.total_count = bandit['total_count']
@@ -28,7 +28,7 @@ class EpsilonGreedy():
         if random.random() > self.epsilon:
             return int(key_max(self.values))
         else:
-            return random.randrange(len(self.values))
+            return int(random.choice(list(self.counts.keys())))
 
     def update(self, chosen_arm, reward):
 

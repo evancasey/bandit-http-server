@@ -1,41 +1,35 @@
 import os
 import sys
 from flask import Flask, g
-from redis import Redis
 import pdb
 
-#---------------------------------------------
-# initialization
-# --------------------------------------------
+def config_str_to_obj(cfg):
+	if isinstance(cfg, basestring):
+		module = __import__('config', fromlist=[cfg])
+		return getattr(module, cfg)
+	return cfg
 
-app = Flask(__name__)
-app.config.update(
-    DEBUG = True,
-)
+def start_app(config):
+	app = Flask(__name__)
 
-def init_db(*args, **kwargs):
-	app = kwargs["app"]
-	if kwargs.get("test", False) == True or app.config['TESTING']:
-		try:
-			return Redis(host='localhost', port=6379, db=1)						
-		except:
-			print "Cannot connect to redis test server.  Exiting..."
-			sys.exit(0)
-	else:
-		try:	
-			return Redis(host='localhost', port=6379, db=0)
-		except:
-			print "Cannot connect to redis test server.  Exiting..."
-			sys.exit(0)
+	config = config_str_to_obj(config)
+	configure_app(app, config) # apply the config env to app
+	configure_blueprints(app)
+	configure_database(app) 
+	# ...insert other configs here
+	return app
 
-def get_db(*args, **kwargs):
-	app = kwargs["app"]
-	with app.app_context():
-		db = getattr(g, 'db', None)
-		if db is None:
-			if kwargs.get("test", False) == True:
-				db = init_db(app = app, test = True)
-			else:
-				db = init_db(app = app)
-		return db
+def configure_app(app,config):
+	app.config.from_object(config)
+	app.config.from_envvar("APP_CONFIG", silent=True)
+
+def configure_blueprints(app):
+	from api import api
+	from lib import errors
+	app.register_blueprint(api)
+	app.register_blueprint(errors)
+
+def configure_database(app):
+	from database import Database
+	Database(app=app)
 

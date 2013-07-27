@@ -7,9 +7,6 @@ import time
 import subprocess
 import signal
 
-sys.path.insert(0, '../')
-from app import app, get_db
-
 sys.path.insert(0, '../client/')
 from client import BanditClient
 

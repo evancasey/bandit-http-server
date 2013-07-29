@@ -9,6 +9,8 @@ import signal
 
 sys.path.insert(0, '../client/')
 from client import BanditClient
+sys.path.insert(0, '../')
+from database import Database
 
 class BanditUnitTest(unittest.TestCase):
 
@@ -19,6 +21,7 @@ class BanditUnitTest(unittest.TestCase):
 		cmd = ["python", "../main.py", "--test"]
 		self.p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, preexec_fn=os.setsid)
 		time.sleep(2)		
+		pdb.set_trace()
 
 		# if not running, check for errors
 		if self.p.poll() != None:
@@ -33,7 +36,8 @@ class BanditUnitTest(unittest.TestCase):
 		self.client = BanditClient()
 
 		# connect to the test db
-		self.db = get_db(app = app, test = True)
+		# self.db = Database()
+		# pdb.set_trace()
 		self.db.flushdb()
 
 	@classmethod

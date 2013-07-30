@@ -1,5 +1,8 @@
 from flask import abort
 import pdb
+import sys
+sys.path.insert(0, '../')
+from models.bandit import Bandit
 
 def json_request(request):
 
@@ -19,10 +22,10 @@ def create_params(request):
 		or (request.json['epsilon'] <= 0.0):
 		abort(401)
 
-def bandit_exists(bandit_id, db):
+def bandit_exists(bandit_id):
 
 	# bandit id must exist as a key
-	if db.hexists("bandits", bandit_id):
+	if Bandit.is_bandit(bandit_id):
 		return True
 	else:
 		abort(404)

@@ -20,8 +20,6 @@ if __name__ == "__main__":
 
 	(options,args) = parser.parse_args()
 
-
-	pdb.set_trace()
 	app = None
 	if options.test_mode:
 		app = start_app(config.Test)

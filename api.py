@@ -34,7 +34,7 @@ def get_bandit(bandit_id):
 
 	# if bandit exists, find it
 	if validations.bandit_exists(bandit_id):
-		bandit_dict = bandit.get_bandit(bandit_id)
+		bandit_dict = Bandit.get_bandit(bandit_id)
 
 	return jsonify( { "bandit_id" : bandit_id, 'name' : bandit_dict['name'], 'total_reward' : bandit_dict['total_reward'], \
 		'total_count' : bandit_dict['total_count'], 'regret' : bandit_dict['regret']} )
@@ -46,7 +46,7 @@ def get_current_arm(bandit_id):
 
 	# if bandit exists, find it
 	if validations.bandit_exists(bandit_id):
-		bandit_dict = bandit.get_bandit(bandit_id)
+		bandit_dict = Bandit.get_bandit(bandit_id)
 
 	# initialize the bandit class object and find the "best" arm
 	current_arm = _start_algo(bandit_dict).select_arm()
@@ -63,7 +63,7 @@ def update_bandit(bandit_id):
 
 	# if bandit exists, find it
 	if validations.bandit_exists(bandit_id):
-		bandit_dict = bandit.get_bandit(bandit_id)
+		bandit_dict = Bandit.get_bandit(bandit_id)
 
 	# update these fields if provided
 	bandit_dict['name'] = request.json.get('name', bandit_dict['name'])
@@ -92,7 +92,7 @@ def update_arm(bandit_id, arm_id):
 	validations.update_arm_params(request)
 
 	if validations.bandit_exists(bandit_id):
-		bandit_dict = bandit.get_bandit(bandit_id)
+		bandit_dict = Bandit.get_bandit(bandit_id)
 		if validations.arm_exists(arm_id, bandit_dict):
 			arm = arm.get_arm(arm_id, bandit_dict)
 
@@ -118,7 +118,7 @@ def delete_bandit(bandit_id):
 
 	# if bandit exists, find it
 	if validations.bandit_exists(bandit_id):
-		bandit_dict = bandit.get_bandit(bandit_id)
+		bandit_dict = Bandit.get_bandit(bandit_id)
 
 	bandit.delete_bandit(bandit_id)
 

@@ -11,7 +11,6 @@ def config_str_to_obj(cfg):
 
 def start_app(config):
 	app = Flask(__name__)
-	pdb.set_trace()
 
 	config = config_str_to_obj(config)
 	configure_app(app, config) # apply the config env to app

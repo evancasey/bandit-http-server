@@ -15,3 +15,6 @@ class Database(object):
 				sys.exit(0)
 		
 		return cls.__db
+
+def get_test_db():
+	return Redis(host='localhost', port=6379, db=1)

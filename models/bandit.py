@@ -1,16 +1,18 @@
+from flask import jsonify
 from arm import Arm
 import sys
 sys.path.insert(0, '../')
 from database import Database
+import pdb
 
 class Bandit(dict):
 
 	def __init__(self, request):
 
 		arms = {}
-		for i in range(request.json['arm_count']):
+		for i in range(request.json['arm_count']):			
 			arm = Arm()
-			arms[arm.id] = arm
+			arms[arm.id] = arm.__dict__
 
 		self.id = self.bandit_keys()
 		self.name = request.json['name']
@@ -31,11 +33,19 @@ class Bandit(dict):
 	def bandit_keys(self):
 		return Database().hincrby("unique_ids", "bandit")
 
-	def get_bandit(id):
+	@classmethod
+	def get_bandit(self, id):
 		return eval(Database().hget("bandits", id)) 
 
 	def set_bandit(self, id):
 		Database().hset("bandits", id, json.dumps(self.__dict__))
+
+	@classmethod
+	def is_bandit(self,id):
+		if Database().hexists("bandits",id):
+			return True
+		else:
+			return False
 
 	def delete_bandit(id):
 		Database().hdel("bandits", id)

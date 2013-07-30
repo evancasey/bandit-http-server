@@ -37,8 +37,9 @@ class Bandit(dict):
 	def get_bandit(self, id):
 		return eval(Database().hget("bandits", id)) 
 
-	def set_bandit(self, id):
-		Database().hset("bandits", id, json.dumps(self.__dict__))
+	@classmethod
+	def set_bandit(self, id, bandit):
+		Database().hset("bandits", id, bandit)
 
 	@classmethod
 	def is_bandit(self,id):
@@ -47,5 +48,6 @@ class Bandit(dict):
 		else:
 			return False
 
+	@classmethod
 	def delete_bandit(id):
 		Database().hdel("bandits", id)

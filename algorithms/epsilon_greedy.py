@@ -22,7 +22,6 @@ class EpsilonGreedy():
         self.total_reward = bandit['total_reward']
         self.total_count = bandit['total_count']
         self.regret = bandit['regret']  
-        return
 
     def select_arm(self):
         if random.random() > self.epsilon:

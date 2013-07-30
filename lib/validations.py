@@ -33,7 +33,7 @@ def bandit_exists(bandit_id):
 def arm_exists(arm_id, dict):
 
 	# arm id must exist as a key
-	if dict['arms'].has_key(str(arm_id)):
+	if dict['arms'].has_key(arm_id):
 		return True
 	else:
 		abort(404)

@@ -6,7 +6,8 @@ import json
 from flask import request, session, url_for, jsonify, make_response, _app_ctx_stack, Blueprint
 from models.arm import Arm
 from models.bandit import Bandit
-from algorithms import epsilon_greedy, softmax
+from algorithms.epsilon_greedy import EpsilonGreedy
+from algorithms.softmax import Softmax
 from lib import validations
 
 api = Blueprint('api', __name__)
@@ -74,7 +75,7 @@ def update_bandit(bandit_id):
 	bandit_dict['reward_type'] = request.json.get('reward_type', bandit_dict['reward_type'])
 	bandit_dict['max_reward'] = request.json.get('max_reward', bandit_dict['max_reward'])
 
-	bandit.set_bandit(bandit_id, bandit)
+	Bandit.set_bandit(bandit_id, bandit_dict)
 
 	# TODO: add some other stuff here
 	return jsonify( {"bandit_id" : bandit_id, "name" : bandit_dict['name'], "algo_type" : bandit_dict['algo_type'], \
@@ -91,22 +92,24 @@ def update_arm(bandit_id, arm_id):
 	# if params not give throw 401 error
 	validations.update_arm_params(request)
 
+	# pdb.set_trace()
 	if validations.bandit_exists(bandit_id):
-		bandit_dict = Bandit.get_bandit(bandit_id)
-		if validations.arm_exists(arm_id, bandit_dict):
-			arm = arm.get_arm(arm_id, bandit_dict)
-
+		bandit_dict = Bandit.get_bandit(bandit_id)				
+		validations.arm_exists(arm_id, bandit_dict)
+		
+			
 	# initialize the bandit algo class object and call update 
-	bandit = _start_algo(bandit_dict).update(str(arm_id), request.json['reward'])	
+	bandit = _start_algo(bandit_dict)
+	bandit.update(arm_id, request.json['reward'])	
 
 	# update the bandit's arm with the values update returns
-	bandit_dict['arms'][str(arm_id)]['count'] = bandit.counts[str(arm_id)]
-	bandit_dict['arms'][str(arm_id)]['value'] = bandit.values[str(arm_id)]
+	bandit_dict['arms'][arm_id]['count'] = bandit.counts[long(arm_id)]
+	bandit_dict['arms'][arm_id]['value'] = bandit.values[long(arm_id)]
 	bandit_dict['regret'] = bandit.regret
 	bandit_dict['total_reward'] = bandit.total_reward
 	bandit_dict['total_count'] = bandit.total_count
 
-	bandit.set_bandit(bandit_id, bandit_dict)
+	Bandit.set_bandit(bandit_id, bandit_dict)
 
 	# TODO: add some other stuff here
 	return jsonify( { "bandit_id" : bandit_id, "regret" : bandit_dict['regret'], "total_reward" : bandit_dict["total_reward"], \
@@ -120,7 +123,7 @@ def delete_bandit(bandit_id):
 	if validations.bandit_exists(bandit_id):
 		bandit_dict = Bandit.get_bandit(bandit_id)
 
-	bandit.delete_bandit(bandit_id)
+	Bandit.delete_bandit(bandit_id)
 
 	# TODO: add some other stuff here
 	return jsonify( { 'result': True } )
@@ -133,6 +136,6 @@ def delete_bandit(bandit_id):
 def _start_algo(bandit):
 	# helper method to initialize the correct bandit class object
 	return {
-		'egreedy' : epsilon_greedy.EpsilonGreedy(bandit),
-		'softmax' : softmax.Softmax(bandit)
+		'egreedy' : EpsilonGreedy(bandit),
+		'softmax' : Softmax(bandit)
 	}[bandit['algo_type']]

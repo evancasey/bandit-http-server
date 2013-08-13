@@ -1,6 +1,7 @@
 import math
 import random
 import pdb
+import numpy as np
 
 #---------------------------------------------
 # Original implemention of this Softmax Multi-Armed Bandit Algorithm
@@ -26,8 +27,10 @@ class Softmax:
         self.epsilon = float(bandit['epsilon'])
         self.counts = {}
         self.values = {}
+        self.reward_history = {}
         self.probs = {}
         for k,v in bandit['arms'].iteritems():
+            self.reward_history[k] = v['reward_history']
             self.counts[k] = v['count']
             self.values[k] = v['value'] 
             self.probs[k] = 0 
@@ -65,9 +68,12 @@ class Softmax:
             new_value = ((n - 1) / float(n)) * value + (1 / float(n)) * reward
             self.values[chosen_arm] = new_value
 
+
             # update regret, total reward, and total_count
             self.total_reward += reward
+
+            best_arm = categorical_draw(self)
             
-            self.regret = sum(self.counts.values()) * self.max_reward - self.total_reward
+            self.regret = (np.mean(self.reward_history[best_arm]) * self.total_count) - (self.total_reward)
 
         return 

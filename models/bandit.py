@@ -26,7 +26,7 @@ class Bandit(dict):
 		self.max_reward = 1
 		self.total_reward = 0
 		self.total_count = 0
-		self.regret = 0
+		self.regret = 0			
 
 		Database().hset("bandits", self.id, self.__dict__)
 

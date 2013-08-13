@@ -10,6 +10,7 @@ class Arm():
 		self.id = self.arm_keys()
 		self.count = 0
 		self.value = 0
+		self.reward_history = []
 
 	def arm_keys(self):		
 		return Database().hincrby("unique_ids", "arm")

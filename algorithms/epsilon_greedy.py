@@ -1,5 +1,6 @@
 import random
 import pdb
+import numpy as np
 
 #---------------------------------------------
 # Original implemention of this E-Greedy Multi-Armed Bandit Algorithm
@@ -15,7 +16,9 @@ class EpsilonGreedy():
         self.epsilon = float(bandit['epsilon'])
         self.counts = {}
         self.values = {}
+        self.reward_history = {}
         for k,v in bandit['arms'].iteritems():
+            self.reward_history[k] = v['reward_history']
             self.counts[k] = v['count']
             self.values[k] = v['value']  
         self.budget = int(bandit['budget'])
@@ -37,7 +40,6 @@ class EpsilonGreedy():
 
         if self.total_count < self.budget:
 
-
             # update count
             self.counts[chosen_arm] = self.counts[chosen_arm] + 1
             n = self.counts[chosen_arm]
@@ -46,10 +48,14 @@ class EpsilonGreedy():
             value = self.values[chosen_arm]
             new_value = ((n - 1) / float(n)) * value + (1 / float(n)) * reward
             self.values[chosen_arm] = new_value
+            self.reward_history[chosen_arm].append(reward)
 
             # update regret, total reward, and total_count
             self.total_reward += reward
-            
-            self.regret = sum(self.counts.values()) * self.max_reward - self.total_reward
+
+            best_arm = int(key_max(self.values))
+
+            self.regret = (np.mean(self.reward_history[best_arm]) * self.total_count) - (self.total_reward)
+            print self.regret
 
         return 

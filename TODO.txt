@@ -1,6 +1,0 @@
-numeric validation
-break out validations with raising errors
-finish client + tests
-
-combine epsilon + temperature
-refactor init_db + create test

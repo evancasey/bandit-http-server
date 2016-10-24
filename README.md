@@ -2,6 +2,8 @@
 
 A Python/Flask REST API for the bandit algorithms. Uses [redis](http://redis.io) under the hood.
 
+Currently supports e-greedy and softmax action selection.
+
 ## Getting Started
 
 Each Bandit has up to 8 parameters associated with it. These include:

@@ -1,26 +1,26 @@
-# OKL-bandits
+# Bandit-http-server
 
-A Python/Flask REST API for the bandit algorithms.
+A Python/Flask REST API for the bandit algorithms. Uses redis under the hood.
 
 ## Getting Started
 
 Each Bandit has up to 8 parameters associated with it. These include:
 
-"name": Can be any string
+* `name`: Can be any string
 
-"arm_count": Must be a positive integer 
+* `arm_count`: Must be a positive integer 
 
-"algo_type": Only "egreedy" or "softmax" (will add more later)
+* `algo_type`: Only "egreedy" or "softmax" (will add more later)
 
-"budget_type": Only "trials" (will add more later)
+* `budget_type`: Only "trials" (will add more later)
 
-"budget": Must be a positive integer
+* `budget`: Must be a positive integer
 
-"epsilon": Must be a float between 0 and 1
+* `epsilon`: Must be a float between 0 and 1
 
-"temperature": Must be a float between 0 and infinity
+* `temperature`: Must be a float between 0 and infinity
 
-"reward_type": Only "click" (will add more later)
+* `reward_type`: Only "click" (will add more later)
 
 
 ## Making API Calls

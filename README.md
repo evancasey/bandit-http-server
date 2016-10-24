@@ -1,6 +1,6 @@
-# Bandit-http-server
+# bandit-http-server
 
-A Python/Flask REST API for the bandit algorithms. Uses redis under the hood.
+A Python/Flask REST API for the bandit algorithms. Uses [redis](http://redis.io) under the hood.
 
 ## Getting Started
 
